@@ -1,5 +1,7 @@
 // To see it working within sbt, do a : 
 // run-main ConciseGreedyDependencyParser.package XYZ
+// or (if this is the only package with a main() in it) :
+// run XYZ  
 
 package object ConciseGreedyDependencyParser {
 
