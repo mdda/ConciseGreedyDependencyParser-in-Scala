@@ -16,27 +16,25 @@ object Perceptron {
 class Perceptron(classes:Vector[Perceptron.ClassName]) {
   type Feature = String
   
-  type Score = Int
-  type ClassVector = Vector[Score]
+  type Weight = Int
+  type ClassVector = Vector[Weight]
   
   // Keyed on feature, then on class# (indexed), to give us count for that class 
   val weights = mutable.Map.empty[Feature, ClassVector]  // This is hairy and mutable...
   
   // The following are keyed on feature (to keep tally of total numbers into each, and when)
-  type Total = Int
-  val totals = mutable.Map.empty[Feature, Total]
+  val totals = mutable.Map.empty[Feature, Int]
   
   type TimeStamp = Int
   val ts     = mutable.Map.empty[Feature, TimeStamp]
   
   // Number of instances seen
-  var seen:Total = 0
+  var seen:Int = 0
   
   def predict(features: Set[Feature]): Perceptron.ClassName = { // Return best class guess for these features
     classes(0)  // TODO
   }
   
-  type Weight = Int
   def score(features: Map[Feature, Weight]): ClassVector = {
     //features foldLeft (
     //)
