@@ -1,12 +1,17 @@
 // To see it working within sbt, do a : 
-// run-main ConciseGreedyDependencyParser.package XYZ
+// run-main ConciseGreedyDependencyParser.Main XYZ
 // or (if this is the only package with a main() in it) :
 // run XYZ  
 
-package object ConciseGreedyDependencyParser {
-  case class DefaultList(list:List[String], default:String="") {
-    def apply(idx: Int): String = if(idx>=0 || idx<list.length) list(idx) else default
-  }
+package ConciseGreedyDependencyParser
+
+case class DefaultList(list:List[String], default:String="") {
+  def apply(idx: Int): String = if(idx>=0 || idx<list.length) list(idx) else default
+}
+
+class Perceptron() {
+  
+}
 
 
 /*
@@ -144,7 +149,8 @@ def learn_mdda(model_dir, train_loc, load_if_exists=False):
   
 */  
 
-  def main(args: Array[String]) {
+object Main extends App {
+  override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
     if(args.contains("learn")) {
       // learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
