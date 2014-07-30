@@ -9,8 +9,24 @@ case class DefaultList(list:List[String], default:String="") {
   def apply(idx: Int): String = if(idx>=0 || idx<list.length) list(idx) else default
 }
 
-class Perceptron() {
+import scala.collection.mutable
+
+class Perceptron(classes:Vector[String]) {
+  type Feature = String
+  type ClassVector = Vector[Int]
   
+  // Keyed on feature, then on class# (indexed), to give us count for that class 
+  val weights = mutable.Map.empty[Feature, ClassVector]  // This is hairy and mutable...
+  
+  // The following are keyed on feature (to keep tally of total numbers into each, and when)
+  type Total = Int
+  val totals = mutable.Map.empty[Feature, Total]
+  
+  type TimeStamp = Int
+  val ts     = mutable.Map.empty[Feature, TimeStamp]
+  
+  // Number of instances seen
+  var seen:Total = 0
 }
 
 
