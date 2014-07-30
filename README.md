@@ -10,8 +10,7 @@ This Dependency Parser was inspired by the following two blog posts :
 This version includes none of the original code, but inherits the same minimalist ideals, in Scala.
 
 There's a much more complete system (which extends over very many more files, however) 
-at the original author's GitHub account : https://github.com/syllog1sm/redshift , which has a TBA license
-and is marked Copyright (C) 2013 Matthew Honnibal.  
+at Matthew Honnibal  (the original author's) GitHub account : https://github.com/syllog1sm/redshift.  
 
 
 
