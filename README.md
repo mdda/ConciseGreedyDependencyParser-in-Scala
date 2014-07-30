@@ -1,9 +1,18 @@
-ConciseGreedyDependencyParser-in-Scala
-======================================
+Concise Greedy Dependency Parser (in Scala)
+===========================================
 
-Concise Greedy Dependency Parser in Scala
+This Dependency Parser was inspired by the following two blog posts : 
 
-Currently a work-in-progress
-----------------------------------
+  * http://honnibal.wordpress.com/2013/09/11/a-good-part-of-speechpos-tagger-in-about-200-lines-of-python/
+
+  * http://honnibal.wordpress.com/2013/12/18/a-simple-fast-algorithm-for-natural-language-dependency-parsing/
+
+
+There's a much more complete system (which extends over very many more files, however) 
+at the original author's GitHub account : https://github.com/syllog1sm/redshift
+
+
+It is currently a *work-in-progress*
+--------------------------------------
 
 I'll update this readme when there's something that is actually testable.
