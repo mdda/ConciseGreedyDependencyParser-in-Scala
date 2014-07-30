@@ -10,10 +10,14 @@ case class DefaultList(list:List[String], default:String="") {
 }
 
 import scala.collection.mutable
-
-class Perceptron(classes:Vector[String]) {
+object Perceptron {
+  type ClassName = String
+}
+class Perceptron(classes:Vector[Perceptron.ClassName]) {
   type Feature = String
-  type ClassVector = Vector[Int]
+  
+  type Score = Int
+  type ClassVector = Vector[Score]
   
   // Keyed on feature, then on class# (indexed), to give us count for that class 
   val weights = mutable.Map.empty[Feature, ClassVector]  // This is hairy and mutable...
@@ -27,6 +31,30 @@ class Perceptron(classes:Vector[String]) {
   
   // Number of instances seen
   var seen:Total = 0
+  
+  def predict(features: Set[Feature]): Perceptron.ClassName = { // Return best class guess for these features
+    classes(0)  // TODO
+  }
+  
+  type Weight = Int
+  def score(features: Map[Feature, Weight]): ClassVector = {
+    //features foldLeft (
+    //)
+  }
+/*  
+    def score(self, features):
+        all_weights = self.weights
+        scores = dict((clas, 0) for clas in self.classes)
+        for feat, value in features.items():
+            if value == 0:
+                continue
+            if feat not in all_weights:
+                continue
+            weights = all_weights[feat]
+            for clas, weight in weights.items():
+                scores[clas] += value * weight
+        return scores
+*/        
 }
 
 
