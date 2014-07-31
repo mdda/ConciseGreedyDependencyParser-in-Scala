@@ -7,10 +7,14 @@ This Dependency Parser was inspired by the following two blog posts :
 
   * http://honnibal.wordpress.com/2013/12/18/a-simple-fast-algorithm-for-natural-language-dependency-parsing/
 
+With original BSD code here : 
+
+  * https://gist.github.com/syllog1sm/10343947
+
 This version includes none of the original code, but inherits the same minimalist ideals, in Scala.
 
 There's a much more complete system (which extends over very many more files, however) 
-at Matthew Honnibal  (the original author's) GitHub account : https://github.com/syllog1sm/redshift.  
+at Matthew Honnibal's (the original author) GitHub account : https://github.com/syllog1sm/redshift.  
 
 
 

@@ -53,8 +53,22 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
       }}
   }
   
-  def update(truth, guess, features): Unit = {
-    
+  def update(truth:Perceptron.ClassName, guess:Perceptron.ClassName, features:List[Feature]): Unit = {
+    seen += 1
+    if(truth != guess) {
+      // For each of the features, add 1 to truth, subtract 1 from guess
+      // and keep track of 'totals' and 'ts'
+      
+      // Ahh : Now, reading the original blog, I see the issue about the AveragePerceptron
+      // The totals/ts are to keep track of the average value of the weight over the whole training cycle
+      // But the current predictions are made just using the current weights (without the to-date averaging feature)
+      
+      // Later, when an 'average_weights' is done, everything could be popped into the weights of a Read-Only structure...
+      // EXCEPT: That honnibal code breaks its own rule, and does an 'average_weights' on ITER=4 for some reason!
+      
+      // TODO
+    }
+    // else SMELL
   }
   
 /*
