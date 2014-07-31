@@ -16,11 +16,12 @@ object Perceptron {
 class Perceptron(classes:Vector[Perceptron.ClassName]) {
   type Feature = String
   
-  type Weight = Int
-  type ClassVector = Vector[Weight]
+  type ClassNum = Int
+  type Weight   = Int
   
-  // Keyed on feature, then on class# (indexed), to give us count for that class 
-  val weights = mutable.Map.empty[Feature, ClassVector]  // This is hairy and mutable...
+  // Keyed on feature, then on class# (as a map), to give us count for that class 
+  type ClassNumToWeight = mutable.Map[ClassNum, Weight]
+  val weights = mutable.Map.empty[Feature, ClassNumToWeight]  // This is hairy and mutable...
   
   // The following are keyed on feature (to keep tally of total numbers into each, and when)
   val totals = mutable.Map.empty[Feature, Int]
@@ -31,29 +32,25 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
   // Number of instances seen
   var seen:Int = 0
   
-  def predict(features: Set[Feature]): Perceptron.ClassName = { // Return best class guess for these features
+  type Score = Int
+  type ClassVector = Vector[Score]
+  
+  def predict(features: Map[Feature, Score]): Perceptron.ClassName = { // Return best class guess for these features-with-weights
     classes(0)  // TODO
   }
   
-  def score(features: Map[Feature, Weight]): ClassVector = {
-    features.filter( pair => pair._2 != 0 ).foldLeft(Vector.fill(classes.length)(0)){ case (acc, (f,w)) => {
-      acc
-    }}
+  def score(features: Map[Feature, Score]): ClassVector = {
+    features
+      .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
+      .foldLeft( Vector.fill(classes.length)(0) ){ case (acc, (feature, score)) => {  // Start with a zero classnum->score vector
+        weights.getOrElse(feature, Map.empty) // This is a Map of ClassNums to Weights (or NOOP if not there)
+          .foldLeft( acc ){ case (acc_for_feature, (classnum, weight)) => { // Add each of the class->weights onto our score vector
+            acc_for_feature.updated(classnum, acc_for_feature(classnum) + score * weight)
+          }}
+      }}
   }
-/*  
-    def score(self, features):
-        all_weights = self.weights
-        scores = dict((clas, 0) for clas in self.classes)
-        for feat, value in features.items():
-            if value == 0:
-                continue
-            if feat not in all_weights:
-                continue
-            weights = all_weights[feat]
-            for clas, weight in weights.items():
-                scores[clas] += value * weight
-        return scores
-*/        
+  
+  
 }
 
 
