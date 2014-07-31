@@ -20,8 +20,8 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
   type Weight   = Int
   
   // Keyed on feature, then on class# (as a map), to give us count for that class 
-  type ClassNumToWeight = mutable.Map[ClassNum, Weight]
-  val weights = mutable.Map.empty[Feature, ClassNumToWeight]  // This is hairy and mutable...
+  //type ClassNumToWeight = mutable.Map[ClassNum, Weight]
+  val weights = mutable.Map.empty[Feature, mutable.Map[ClassNum, Weight]]  // This is hairy and mutable...
   
   // The following are keyed on feature (to keep tally of total numbers into each, and when)
   val totals = mutable.Map.empty[Feature, Int]
@@ -36,7 +36,10 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
   type ClassVector = Vector[Score]
   
   def predict(features: Map[Feature, Score]): Perceptron.ClassName = { // Return best class guess for these features-with-weights
-    classes(0)  // TODO
+    val classnum_vector = score(features)
+    // Find the best classnum for this vector, in vector order (stabilizes) ///NOT : (and alphabetically too)
+    val best_classnum = classnum_vector.zipWithIndex.maxBy(_._1)._2
+    classes(best_classnum)
   }
   
   def score(features: Map[Feature, Score]): ClassVector = {
