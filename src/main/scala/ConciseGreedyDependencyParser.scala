@@ -74,8 +74,8 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
             b) have one Trainable object, which can also be used for prediction later (potentailly mutable, as here)
       
         The 'thing' seems to be that :
-            i)  the Perceptron with non-averaging weights being used to guide updating goes about the job of fixing 
-                up the average case, and then the error cases really effectively.
+            i)  the {Perceptron with non-averaging weights being used to guide updating} goes about the job of fixing 
+                up the average case, and followed by the then error cases really effectively.
             ii) But the average_weights version is better for usage in the field, since it is less training-order sensitive
             
             
