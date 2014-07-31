@@ -66,6 +66,12 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
       // Later, when an 'average_weights' is done, everything could be popped into the weights of a Read-Only structure...
       // EXCEPT: That honnibal code breaks its own rule, and does an 'average_weights' on ITER=4 for some reason!
       
+      // So: Question is whether 
+      //      a) to have two objects, one which is RO (and immutable) after training 
+      //          (and the other with the tracking stuff for during training, potentially mutable)
+      //          The load/save can be done on the post 'average_weights' call, and crunched smaller
+      //      b) have one Trainable object, which can also be used for prediction later (potentailly mutable, as here)
+      
       // TODO
     }
     // else SMELL
