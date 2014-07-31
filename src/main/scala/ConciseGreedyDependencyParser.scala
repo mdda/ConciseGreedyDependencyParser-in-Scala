@@ -78,7 +78,8 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
                 up the average case, and followed by the then error cases really effectively.
             ii) But the average_weights version is better for usage in the field, since it is less training-order sensitive
             
-            
+            :: probably a good idea to do 'scoring' in 2 different ways: Using AverageWeight or CurrentWeight
+               - this would mean having 2 different prediction things too (or pass the relevant scoring function)
       */
       
       // TODO
