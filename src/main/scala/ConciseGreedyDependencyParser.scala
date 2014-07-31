@@ -17,22 +17,21 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
   type Feature = String
   
   type ClassNum = Int
-  type Weight   = Int
   
-  // Keyed on feature, then on class# (as a map), to give us count for that class 
-  //type ClassNumToWeight = mutable.Map[ClassNum, Weight]
-  val weights = mutable.Map.empty[Feature, mutable.Map[ClassNum, Weight]]  // This is hairy and mutable...
+  // The following are keyed on feature (to keep tally of total numbers into each, and when)(for the TRAINING phase)
+  case class WeightLearner(current:Int, total:Int, ts:TimeStamp) 
+  val learning = mutable.Map.empty[Feature, mutable.Map[ClassNum, WeightLearner]] // This is hairy and mutable...
   
-  // The following are keyed on feature (to keep tally of total numbers into each, and when)
-  val totals = mutable.Map.empty[Feature, Int]
+  // Number of instances seen - used to measure how 'old' each total is
+  var ts:TimeStamp = 0
   
-  type TimeStamp = Int
-  val ts     = mutable.Map.empty[Feature, TimeStamp]
+
+  // Keyed on feature, then on class# (as a map), to give us accurate weight for that class (for the USAGE phase)
+  type Weight   = Float
+  val weights  = mutable.Map.empty[Feature, mutable.Map[ClassNum, Weight]]  // This is hairy and mutable...
   
-  // Number of instances seen
-  var seen:Int = 0
   
-  type Score = Int
+  type Score = Float
   type ClassVector = Vector[Score]
   
   def predict(features: Map[Feature, Score]): Perceptron.ClassName = { // Return best class guess for these features-with-weights
@@ -42,7 +41,7 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
     classes(best_classnum)
   }
   
-  def score(features: Map[Feature, Score]): ClassVector = {
+  def score(features: Map[Feature, Score]): ClassVector = { // This is based on the 
     features
       .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
       .foldLeft( Vector.fill(classes.length)(0) ){ case (acc, (feature, score)) => {  // Start with a zero classnum->score vector
@@ -54,7 +53,7 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
   }
   
   def update(truth:Perceptron.ClassName, guess:Perceptron.ClassName, features:List[Feature]): Unit = {
-    seen += 1
+    ts += 1
     if(truth != guess) {
       // For each of the features, add 1 to truth, subtract 1 from guess
       // and keep track of 'totals' and 'ts'
