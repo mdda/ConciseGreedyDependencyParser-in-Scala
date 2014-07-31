@@ -59,18 +59,27 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
       // For each of the features, add 1 to truth, subtract 1 from guess
       // and keep track of 'totals' and 'ts'
       
-      // Ahh : Now, reading the original blog, I see the issue about the AveragePerceptron
-      // The totals/ts are to keep track of the average value of the weight over the whole training cycle
-      // But the current predictions are made just using the current weights (without the to-date averaging feature)
+      /*
+       Ahh : Now, reading the original blog, I see the issue about the AveragePerceptron
+       The totals/ts are to keep track of the average value of the weight over the whole training cycle
+       But the current predictions are made just using the current weights (without the to-date averaging feature)
       
-      // Later, when an 'average_weights' is done, everything could be popped into the weights of a Read-Only structure...
-      // EXCEPT: That honnibal code breaks its own rule, and does an 'average_weights' on ITER=4 for some reason!
+       Later, when an 'average_weights' is done, everything could be popped into the weights of a Read-Only structure...
+       EXCEPT: That honnibal code breaks its own rule, and does an 'average_weights' on ITER=4 for some reason!
       
-      // So: Question is whether 
-      //      a) to have two objects, one which is RO (and immutable) after training 
-      //          (and the other with the tracking stuff for during training, potentially mutable)
-      //          The load/save can be done on the post 'average_weights' call, and crunched smaller
-      //      b) have one Trainable object, which can also be used for prediction later (potentailly mutable, as here)
+        So: Question is whether 
+            a) to have two objects, one which is RO (and immutable) after training 
+                (and the other with the tracking stuff for during training, potentially mutable)
+                The load/save can be done on the post 'average_weights' call, and crunched smaller
+            b) have one Trainable object, which can also be used for prediction later (potentailly mutable, as here)
+      
+        The 'thing' seems to be that :
+            i)  the Perceptron with non-averaging weights being used to guide updating goes about the job of fixing 
+                up the average case, and then the error cases really effectively.
+            ii) But the average_weights version is better for usage in the field, since it is less training-order sensitive
+            
+            
+      */
       
       // TODO
     }
