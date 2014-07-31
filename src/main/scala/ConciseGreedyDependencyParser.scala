@@ -36,8 +36,9 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
   }
   
   def score(features: Map[Feature, Weight]): ClassVector = {
-    //features foldLeft (
-    //)
+    features.filter( pair => pair._2 != 0 ).foldLeft(Vector.fill(classes.length)(0)){ case (acc, (f,w)) => {
+      acc
+    }}
   }
 /*  
     def score(self, features):
