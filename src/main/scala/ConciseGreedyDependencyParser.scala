@@ -86,7 +86,11 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
         
         Simply storing the trio (since ts==const, almost WLOG) {current, total, ts} would be more flexible code-wise, 
         at small loss of flexbility. The float 'average' would be generated on-demand from total & ts.
+        
+        In fact, the float 'average' can be computed on demand - no need to store it at all (hardly any time saving).
+        
         More space savings available by splitting out the feature header independent of the feature values
+        
       */
       
       // TODO
