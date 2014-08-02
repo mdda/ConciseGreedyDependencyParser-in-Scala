@@ -7,6 +7,9 @@ package ConciseGreedyDependencyParser
 
 import scala.collection.mutable
 
+import scala.pickling._
+import json._
+
 package object ConciseGreedyDependencyParserObj {
   type ClassName = String
   type FeatureName = String
