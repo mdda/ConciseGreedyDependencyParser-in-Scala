@@ -75,7 +75,7 @@ class Perceptron(classes:Vector[ClassName]) {
       }}
   }
   
-  def update(truth:ClassName, guess:ClassName, features:List[Feature]): Unit = {
+  def update(truth:ClassName, guess:ClassName, features:List[Feature]): Unit = { // Hmmm ..Unit..
     seen += 1
     if(truth != guess) {
       for {
@@ -87,10 +87,23 @@ class Perceptron(classes:Vector[ClassName]) {
         cn_wl.update(n_truth, cn_wl.getOrElse(n_truth, WeightLearnerInitial ).update(+1))  // This could easily be a new entry
       }
     }
-    // else SMELL of Unit...
   }
   
+  // No need for average_weights - it's all done dynamically
   
+  def save(path: String):Unit = {
+    print(s"Saving model to ${path}")
+    
+  }
+
+/*  
+    def save(self, path):
+        print "Saving model to %s" % path
+        pickle.dump(self.weights, open(path, 'w'))
+        
+    def load(self, path):
+        self.weights = pickle.load(open(path))
+*/  
 }
 
 
