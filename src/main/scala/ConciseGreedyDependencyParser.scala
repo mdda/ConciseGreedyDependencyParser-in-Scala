@@ -26,7 +26,13 @@ class Perceptron(classes:Vector[ClassName]) {
   type ClassNum  = Int
   type TimeStamp = Int
   
-  case class WeightLearner(current:Int, total:Int, ts:TimeStamp) 
+  case class WeightLearner(current:Int, total:Int, ts:TimeStamp) {
+    def update(change:Int) = {
+      new WeightLearner(current + change, total + current*(seen-ts), seen)
+    }
+  }
+  def WeightLearnerInitial = WeightLearner(0, 0, seen)
+  
   type ClassToWeightLearner = mutable.Map[ ClassNum,  WeightLearner ]  // tells us the stats of each class (if present) 
   
   // The following are keyed on feature (to keep tally of total numbers into each, and when)(for the TRAINING phase)
@@ -39,30 +45,22 @@ class Perceptron(classes:Vector[ClassName]) {
                   ] // This is hairy and mutable...
   
   // Number of instances seen - used to measure how 'old' each total is
-  var ts:TimeStamp = 0
+  var seen:TimeStamp = 0
   
   type Score = Float
   type ClassVector = Vector[Score]
 
-/*  
-  def predict(features: Map[Feature, Score]): Perceptron.ClassName = { // Return best class guess for these features-with-weights
-    val classnum_vector = score(features)
-    // Find the best classnum for this vector, in vector order (stabilizes) ///NOT : (and alphabetically too)
-    val best_classnum = classnum_vector.zipWithIndex.maxBy(_._1)._2
-    classes(best_classnum)
-  }
-*/
+  def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
 
   def predict(classnum_vector : ClassVector) : ClassName = { // Return best class guess for this vector of weights
-    // Find the best classnum for this vector, in vector order (stabilizes) ///NOT : (and alphabetically too)
-    val best_classnum = classnum_vector.zipWithIndex.maxBy(_._1)._2
+    val best_classnum = classnum_vector.zipWithIndex.maxBy(_._1)._2   // in vector order (stabilizes) ///NOT : (and alphabetically too)
     classes(best_classnum)
   }
 
-  def average(w : WeightLearner):Float = (w.current*(ts-w.ts) + w.total) / ts.toFloat // This is dynamically calculated
+  def average(w : WeightLearner):Float = (w.current*(seen-w.ts) + w.total) / seen // This is dynamically calculated
   def current(w : WeightLearner):Float =  w.current
   
-  def score(features: Map[Feature, Score], score_method: WeightLearner => Float): ClassVector = { // This is based on the 
+  def score(features: Map[Feature, Score], score_method: WeightLearner => Float): ClassVector = { // Return 'dot-product' score for all classes
     features
       .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
       .foldLeft( Vector.fill(classes.length)(0:Float) ){ case (acc, (Feature(name,data), score)) => {  // Start with a zero classnum->score vector
@@ -78,32 +76,20 @@ class Perceptron(classes:Vector[ClassName]) {
   }
   
   def update(truth:ClassName, guess:ClassName, features:List[Feature]): Unit = {
-    ts += 1
+    seen += 1
     if(truth != guess) {
-      // For each of the features, add 1 to truth, subtract 1 from guess
-      // and keep track of 'totals' and 'ts'
-      
-      // TODO
+      for {
+        feature <- features
+      } {
+        val cn_wl = learning.getOrElse(feature.name, Map.empty[String,ClassToWeightLearner]).getOrElse(feature.data, mutable.Map.empty[ ClassNum,  WeightLearner ])
+        val (n_guess, n_truth) = (getClassNum(guess), getClassNum(truth))
+        cn_wl.update(n_guess, cn_wl.getOrElse(n_guess, WeightLearnerInitial ).update(-1))  // This REALLY OUGHT to exist, since it is what I chose (incorrectly)...
+        cn_wl.update(n_truth, cn_wl.getOrElse(n_truth, WeightLearnerInitial ).update(+1))  // This could easily be a new entry
+      }
     }
-    // else SMELL
+    // else SMELL of Unit...
   }
   
-/*
-    def update(self, truth, guess, features):       
-        def upd_feat(c, f, w, v):
-            param = (f, c)
-            self._totals[param] += (self.i - self._tstamps[param]) * w
-            self._tstamps[param] = self.i
-            self.weights[f][c] = w + v
-
-        self.i += 1
-        if truth == guess:
-            return None
-        for f in features:
-            weights = self.weights.setdefault(f, {})
-            upd_feat(truth, f, weights.get(truth, 0.0), 1.0)
-            upd_feat(guess, f, weights.get(guess, 0.0), -1.0)
-*/  
   
 }
 
