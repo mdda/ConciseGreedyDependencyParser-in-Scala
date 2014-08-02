@@ -5,93 +5,83 @@
 
 package ConciseGreedyDependencyParser
 
+import scala.collection.mutable
+
+package object ConciseGreedyDependencyParserObj {
+  type ClassName = String
+  type FeatureName = String
+  type FeatureData = String
+}
+
+import ConciseGreedyDependencyParserObj._
+
+case class Feature(name:FeatureName, data:FeatureData)
+
 case class DefaultList(list:List[String], default:String="") {
   def apply(idx: Int): String = if(idx>=0 || idx<list.length) list(idx) else default
 }
 
-import scala.collection.mutable
-object Perceptron {
-  type ClassName = String
-}
-class Perceptron(classes:Vector[Perceptron.ClassName]) {
-  type Feature = String
+class Perceptron(classes:Vector[ClassName]) {
+  // These need not be visible outside the class
+  type ClassNum  = Int
+  type TimeStamp = Int
   
-  type ClassNum = Int
+  case class WeightLearner(current:Int, total:Int, ts:TimeStamp) 
+  type ClassToWeightLearner = mutable.Map[ ClassNum,  WeightLearner ]  // tells us the stats of each class (if present) 
   
   // The following are keyed on feature (to keep tally of total numbers into each, and when)(for the TRAINING phase)
-  case class WeightLearner(current:Int, total:Int, ts:TimeStamp) 
-  val learning = mutable.Map.empty[Feature, mutable.Map[ClassNum, WeightLearner]] // This is hairy and mutable...
+  val learning =  mutable.Map.empty[
+                    String,    // Corresponds to Feature.name
+                    mutable.Map[
+                      String,  // Corresponds to Feature.data 
+                      ClassToWeightLearner
+                    ]
+                  ] // This is hairy and mutable...
   
   // Number of instances seen - used to measure how 'old' each total is
   var ts:TimeStamp = 0
   
-
-  // Keyed on feature, then on class# (as a map), to give us accurate weight for that class (for the USAGE phase)
-  type Weight   = Float
-  val weights  = mutable.Map.empty[Feature, mutable.Map[ClassNum, Weight]]  // This is hairy and mutable...
-  
-  
   type Score = Float
   type ClassVector = Vector[Score]
-  
+
+/*  
   def predict(features: Map[Feature, Score]): Perceptron.ClassName = { // Return best class guess for these features-with-weights
     val classnum_vector = score(features)
     // Find the best classnum for this vector, in vector order (stabilizes) ///NOT : (and alphabetically too)
     val best_classnum = classnum_vector.zipWithIndex.maxBy(_._1)._2
     classes(best_classnum)
   }
+*/
+
+  def predict(classnum_vector : ClassVector) : ClassName = { // Return best class guess for this vector of weights
+    // Find the best classnum for this vector, in vector order (stabilizes) ///NOT : (and alphabetically too)
+    val best_classnum = classnum_vector.zipWithIndex.maxBy(_._1)._2
+    classes(best_classnum)
+  }
+
+  def average(w : WeightLearner):Float = (w.current*(ts-w.ts) + w.total) / ts.toFloat // This is dynamically calculated
+  def current(w : WeightLearner):Float =  w.current
   
-  def score(features: Map[Feature, Score]): ClassVector = { // This is based on the 
+  def score(features: Map[Feature, Score], score_method: WeightLearner => Float): ClassVector = { // This is based on the 
     features
       .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
-      .foldLeft( Vector.fill(classes.length)(0) ){ case (acc, (feature, score)) => {  // Start with a zero classnum->score vector
-        weights.getOrElse(feature, Map.empty) // This is a Map of ClassNums to Weights (or NOOP if not there)
-          .foldLeft( acc ){ case (acc_for_feature, (classnum, weight)) => { // Add each of the class->weights onto our score vector
-            acc_for_feature.updated(classnum, acc_for_feature(classnum) + score * weight)
-          }}
+      .foldLeft( Vector.fill(classes.length)(0:Float) ){ case (acc, (Feature(name,data), score)) => {  // Start with a zero classnum->score vector
+        learning
+          .getOrElse(name, Map.empty[String,ClassToWeightLearner])   // This is first level of feature access
+            .getOrElse(data, Map.empty[ ClassNum,  WeightLearner ])       // This is second level of feature access and is a Map of ClassNums to Weights (or NOOP if not there)
+              .foldLeft( acc ){ (acc_for_feature, cn_wl) => { // Add each of the class->weights onto our score vector
+                val classnum:ClassNum = cn_wl._1
+                val weight_learner:WeightLearner = cn_wl._2
+                acc_for_feature.updated(classnum, acc_for_feature(classnum) + score * score_method(weight_learner))
+              }}
       }}
   }
   
-  def update(truth:Perceptron.ClassName, guess:Perceptron.ClassName, features:List[Feature]): Unit = {
+  def update(truth:ClassName, guess:ClassName, features:List[Feature]): Unit = {
     ts += 1
     if(truth != guess) {
       // For each of the features, add 1 to truth, subtract 1 from guess
       // and keep track of 'totals' and 'ts'
-      
-      /*
-       Ahh : Now, reading the original blog, I see the issue about the AveragePerceptron
-       The totals/ts are to keep track of the average value of the weight over the whole training cycle
-       But the current predictions are made just using the current weights (without the to-date averaging feature)
-      
-       Later, when an 'average_weights' is done, everything could be popped into the weights of a Read-Only structure...
-       EXCEPT: That honnibal code breaks its own rule, and does an 'average_weights' on ITER=4 for some reason!
-      
-        So: Question is whether 
-            a) to have two objects, one which is RO (and immutable) after training 
-                (and the other with the tracking stuff for during training, potentially mutable)
-                The load/save can be done on the post 'average_weights' call, and crunched smaller - 
-                however this looses the state of the 'most current' weights
-            b) have one Trainable object, which can also be used for prediction later (potentially mutable, as here)
-      
-        The 'thing' seems to be that :
-            i)  the {Perceptron with non-averaging weights being used to guide updating} goes about the job of fixing 
-                up the average case, and the follows up by targetting the remaining error cases really effectively.
-            ii) But the average_weights version is better for usage in the field, since it is less training-order sensitive
-            
-            :: probably a good idea to do 'scoring' in 2 different ways: Using AverageWeight or CurrentWeight
-               - this would mean having 2 different prediction things too (or pass the relevant scoring function)
-               
-        To make the stored images on disk small, should have two distinct objects, one Averaged ={total/ts}, one with {current, total, ts}
-        But this is 'on the face of it' a small saving, since the pickled parser is 34Mb.
-        
-        Simply storing the trio (since ts==const, almost WLOG) {current, total, ts} would be more flexible code-wise, 
-        at small loss of flexbility. The float 'average' would be generated on-demand from total & ts.
-        
-        In fact, the float 'average' can be computed on demand - no need to store it at all (hardly any time saving).
-        
-        More space savings available by splitting out the feature header independent of the feature values
-        
-      */
       
       // TODO
     }
