@@ -69,16 +69,24 @@ class Perceptron(classes:Vector[Perceptron.ClassName]) {
         So: Question is whether 
             a) to have two objects, one which is RO (and immutable) after training 
                 (and the other with the tracking stuff for during training, potentially mutable)
-                The load/save can be done on the post 'average_weights' call, and crunched smaller
-            b) have one Trainable object, which can also be used for prediction later (potentailly mutable, as here)
+                The load/save can be done on the post 'average_weights' call, and crunched smaller - 
+                however this looses the state of the 'most current' weights
+            b) have one Trainable object, which can also be used for prediction later (potentially mutable, as here)
       
         The 'thing' seems to be that :
             i)  the {Perceptron with non-averaging weights being used to guide updating} goes about the job of fixing 
-                up the average case, and followed by the then error cases really effectively.
+                up the average case, and the follows up by targetting the remaining error cases really effectively.
             ii) But the average_weights version is better for usage in the field, since it is less training-order sensitive
             
             :: probably a good idea to do 'scoring' in 2 different ways: Using AverageWeight or CurrentWeight
                - this would mean having 2 different prediction things too (or pass the relevant scoring function)
+               
+        To make the stored images on disk small, should have two distinct objects, one Averaged ={total/ts}, one with {current, total, ts}
+        But this is 'on the face of it' a small saving, since the pickled parser is 34Mb.
+        
+        Simply storing the trio (since ts==const, almost WLOG) {current, total, ts} would be more flexible code-wise, 
+        at small loss of flexbility. The float 'average' would be generated on-demand from total & ts.
+        More space savings available by splitting out the feature header independent of the feature values
       */
       
       // TODO
