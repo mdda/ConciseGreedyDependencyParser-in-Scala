@@ -119,6 +119,10 @@ class Perceptron(classes:Vector[ClassName]) {
     
     val buffered_source = Source.fromFile(path)
     val unpickled = buffered_source.toString.unpickle[learning.type]
+    
+    // Now copy the unpickled version into learning
+    learning.clear
+    learning ++= unpickled
   }
 
 /*  
