@@ -9,6 +9,7 @@ import scala.collection.mutable
 
 import scala.pickling._
 import json._
+//import binary._
 
 package object ConciseGreedyDependencyParserObj {
   type ClassName = String
@@ -96,7 +97,8 @@ class Perceptron(classes:Vector[ClassName]) {
   
   def save(path: String):Unit = {
     print(s"Saving model to ${path}")
-    
+    val pickled = learning.pickle
+    //val unpickled = pickled.unpickle[Wrapper]
   }
 
 /*  
