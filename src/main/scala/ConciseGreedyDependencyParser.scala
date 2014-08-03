@@ -7,6 +7,7 @@ package ConciseGreedyDependencyParser
 
 import scala.collection.mutable
 
+// https://github.com/scala/pickling
 import scala.pickling._
 import json._
 //import binary._
@@ -97,7 +98,10 @@ class Perceptron(classes:Vector[ClassName]) {
   }
   
   // No need for average_weights - it's all done dynamically
-  
+
+ 
+  // http://stackoverflow.com/questions/23182577/even-trivial-serialization-examples-in-scala-dont-work-why
+  // http://stackoverflow.com/questions/23072118/scala-pickling-how
   def save(path: String):Unit = {
     print(s"Saving model to ${path}")
     
@@ -106,7 +110,8 @@ class Perceptron(classes:Vector[ClassName]) {
     //fos.write(learning.pickle)
     
     val pw = new PrintWriter(new File(path))
-    pw.write(learning.pickle.value)
+    // Uncommenting this line increases compile time from 2s to 9s...
+    //pw.write(learning.pickle.value)
     pw.close
   }
 
@@ -119,6 +124,7 @@ class Perceptron(classes:Vector[ClassName]) {
     
     val buffered_source = Source.fromFile(path)
     val unpickled = buffered_source.toString.unpickle[learning.type]
+    //val unpickled = learning
     
     // Now copy the unpickled version into learning
     learning.clear
