@@ -3,7 +3,7 @@ import Keys._
 
 object ConciseGreedyDependencyParserBuild extends Build {
   def scalaSettings = Seq(
-    scalaVersion := "2.10.3",
+    scalaVersion := "2.10.3",  // 2.10.0 was too low to get implicit macros (needed for pickling)
     scalacOptions ++= Seq(
       "-optimize",
       "-unchecked",
