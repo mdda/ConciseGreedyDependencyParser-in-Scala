@@ -11,6 +11,9 @@ import scala.pickling._
 import json._
 //import binary._
 
+import java.io.{PrintWriter, File}
+import scala.io.{Source}
+
 package object ConciseGreedyDependencyParserObj {
   type ClassName = String
   type FeatureName = String
@@ -97,8 +100,25 @@ class Perceptron(classes:Vector[ClassName]) {
   
   def save(path: String):Unit = {
     print(s"Saving model to ${path}")
-    val pickled = learning.pickle
+    
+    //val fos = new FileOutputStream(path)
+    //val pickled = learning.pickle
+    //fos.write(learning.pickle)
+    
+    val pw = new PrintWriter(new File(path))
+    pw.write(learning.pickle.value)
+    pw.close
+  }
+
+  def load(path: String):Unit = {
+    print(s"Loading Perceptron model to ${path}")
+    
+    //val pickled = learning.pickle
     //val unpickled = pickled.unpickle[Wrapper]
+    //learning =  // Hmm : this is a val of a mutable.Map, may need to copy data in explicitly
+    
+    val buffered_source = Source.fromFile(path)
+    val unpickled = buffered_source.toString.unpickle[learning.type]
   }
 
 /*  
