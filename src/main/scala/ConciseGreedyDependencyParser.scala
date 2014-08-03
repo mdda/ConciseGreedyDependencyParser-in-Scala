@@ -110,7 +110,7 @@ class Perceptron(classes:Vector[ClassName]) {
     //fos.write(learning.pickle)
     
     val pw = new PrintWriter(new File(path))
-    // Uncommenting this line increases compile time from 2s to 9s...
+    // Uncommenting this line increases compile time from 2s to 10s...
     //pw.write(learning.pickle.value)
     pw.close
   }

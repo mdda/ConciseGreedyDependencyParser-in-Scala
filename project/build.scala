@@ -14,7 +14,12 @@ object ConciseGreedyDependencyParserBuild extends Build {
   def librarySettings = Seq(
     libraryDependencies ++= Seq(
       //"com.mycompany" % "mylibrary" % "0.1-SNAPSHOT"
-      "org.scala-lang" %% "scala-pickling" % "0.8.0"  
+      
+      //"org.scala-lang" %% "scala-pickling" % "0.8.0"  
+      "org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT"  
+    ),
+    resolvers ++= Seq(
+      Resolver.sonatypeRepo("snapshots") // Needed to use the 0.9.0-SNAPSHOT
     )
   )
   
