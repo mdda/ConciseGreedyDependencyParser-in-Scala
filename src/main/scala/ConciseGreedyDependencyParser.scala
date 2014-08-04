@@ -154,8 +154,9 @@ object Tagger {
   // Make a tag dictionary for single-tag words : So that they can be 'resolved' immediately, as well as the class list
   def classes_and_tagdict(training_sentences: List[Sentence]): (Vector[ClassName], Map[Word, ClassNum])  = {
     // First, get the set of classnames, and the counts for all the words and tags
-//    val (class_set:Set[ClassName], full_map:Map[Word, Map[ClassName, Int]]) =
 
+/*
+    // functional approach takes 120ms on full training data
     val (class_set, full_map) =
       training_sentences.foldLeft( ( Set[ClassName](), Map[ Word, Map[ClassName, Int] ]() ) ) { case ( (classes, map), sentence ) => {
         sentence.foldLeft( (classes, map) ) { case ( (classes, map), word_data) => {
@@ -167,23 +168,26 @@ object Tagger {
                      + ((word_data.pos, count+1)) 
                   )) 
           )
-/*          
-          if(map.contains(word_data.norm)) {
-            if(map(word_data.norm).contains(word_data.pos)) {
-              val count = map.getOrElse(word_data.norm, Map[ClassName, Int]()).getOrElse(word_data.pos, 0:Int)
-              ( cl, map + (( word_data.norm, Map[ClassName, Int]((word_data.pos, count+1)) )) )
-            }
-            else { // Not in map yet : Instantiate it
-              ( cl, map + ( word_data.norm, (word_data.pos, 1) ) )
-            }
-          }
-          else {
-            ( cl, map + ( word_data.norm, (word_data.pos, 1) ) )
-          }
-*/          
         }}
       }}
-      
+*/
+
+    // functional approach takes 60ms on full training data !
+    val class_set = mutable.Set[ClassName]()
+    val full_map  = mutable.Map[ Word, mutable.Map[ClassName, Int] ]()
+    
+                    //.withDefault( k => mutable.Map[ClassName, Int]().withDefaultValue(0) )
+                    //.withDefaultValue( new mutable.Map[ClassName, Int]().withDefaultValue(0) )
+                    
+    for {
+      sentence <- training_sentences
+      word_data <- sentence
+    } {
+      class_set += word_data.pos
+      full_map.getOrElseUpdate(word_data.norm, mutable.Map[ClassName, Int]().withDefaultValue(0))(word_data.pos) += 1
+      //println(s"making (${word_data.norm})(${word_data.pos})=>(${full_map(word_data.norm)(word_data.pos)})")
+    }
+          
     // Convert the set of classes into a nice map, with indexer
     val classes = class_set.toVector.sorted  // This is (likely) alphabetical
     val class_map = classes.zipWithIndex.toMap
@@ -201,7 +205,7 @@ object Tagger {
       if(v >= classes.values.sum * ambiguity_thresh) // Must be concentrated (in fact, cl must be unique... since >50%)
     } {
       tag_dict(norm) = class_map(cl)
-      println(s"${norm}=${cl}")
+      //println(s"${norm}=${cl}")
     }
     (classes, tag_dict.toMap)
   }
@@ -392,6 +396,7 @@ object Main extends App {
          //if(i<5)
       ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
   
+      //val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences)
       benchmark( Unit=>{ val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
     }
     else {
