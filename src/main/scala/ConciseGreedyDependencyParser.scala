@@ -101,7 +101,7 @@ class Perceptron(n_classes:Int) {
       }}
   }
   
-  def update(truth:ClassNum, guess:ClassNum, features:List[Feature]): Unit = { // Hmmm ..Unit..
+  def update(truth:ClassNum, guess:ClassNum, features:Iterable[Feature]): Unit = { // Hmmm ..Unit..
     seen += 1
     if(truth != guess) {
       for {
@@ -173,10 +173,9 @@ object Tagger {
       }}
 */
 
-    // functional approach takes 60ms on full training data !
+    // mutable external collection approach takes 60ms on full training data !
     val class_set = mutable.Set[ClassName]()
     val full_map  = mutable.Map[ Word, mutable.Map[ClassName, Int] ]()
-    
                     //.withDefault( k => mutable.Map[ClassName, Int]().withDefaultValue(0) )
                     //.withDefaultValue( new mutable.Map[ClassName, Int]().withDefaultValue(0) )
                     
@@ -190,7 +189,7 @@ object Tagger {
     }
           
     // Convert the set of classes into a nice map, with indexer
-    val classes = class_set.toVector.sorted  // This is (likely) alphabetical
+    val classes = class_set.toVector.sorted  // This is alphabetical
     val class_map = classes.zipWithIndex.toMap
     println(s"Classes = [${classes.mkString(",")}]")
 
@@ -217,11 +216,11 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
   val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // Would throw exception if not found
   //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
   
-  //val perceptron = new Perceptron(classes)
+  val perceptron = new Perceptron(classes.length)
   
-  def get_features(sentence:Sentence, i:Int):Set[Feature] = {
-    val feature_set = mutable.Set[Feature]()  // Could actually do this one as an immutable (since features are easily enumerated)
-    feature_set += Feature("bias",     "")  // It's useful to have a constant feature, which acts sort of like a prior
+  def get_features(sentence:Sentence, i:Int):Map[Feature,Score] = {
+    val feature_set = mutable.Set[Feature]() 
+    feature_set += Feature("bias",       "")  // It's useful to have a constant feature, which acts sort of like a prior
     
     feature_set += Feature("word",       sentence(i).norm)  
     feature_set += Feature("i suffix",   sentence(i).norm.takeRight(3))  
@@ -242,10 +241,37 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
     feature_set += Feature("w+1 suffix", sentence(i+1).norm.takeRight(3))  
     
     feature_set += Feature("w+2",        sentence(i+2).norm)  
-    feature_set.toSet
+    
+    // All weights on this set of features are ==1
+    feature_set.map( f => (f, 1:Score) ).toMap
   }
-  
 
+  def train(sentences:List[Sentence]):Unit = {
+    for {
+      sentence <- sentences
+      i <- 2 until sentence.length-2
+      if(! tag_dict.contains(sentence(i).norm)) // Don't do anything if we already 'know' it
+    } {
+      val features = get_features(sentence, i)
+      val score = perceptron.score(features, perceptron.current)
+      val guessed = perceptron.predict( score )
+      perceptron.update( getClassNum(sentence(i).pos), guessed, features.keys)
+    }
+    
+  }
+
+/*  
+    def train_one(self, words, tags):
+        prev, prev2 = START
+        context = START + [self._normalize(w) for w in words] + END
+        for i, word in enumerate(words):
+            guess = self.tagdict.get(word)
+            if not guess:
+                feats = self._get_features(i, word, context, prev, prev2)
+                guess = self.model.predict(feats)
+                self.model.update(tags[i], guess, feats)
+            prev2 = prev; prev = guess
+*/
 }
 
 
@@ -422,9 +448,11 @@ object Main extends App {
          //if(i<5)
       ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
   
-      val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences)
-      //benchmark( Unit=>{ val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
+      val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences)
+      //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
       
+      val tagger = new Tagger("", classes, tag_dict)
+      tagger.train(training_sentences)
       
       
     }
