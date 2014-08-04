@@ -21,6 +21,8 @@ package object ConciseGreedyDependencyParserObj {
   
   type FeatureName = String
   type FeatureData = String
+  type Score = Float
+  
   type Word = String
   type Sentence = List[WordData]
   
@@ -75,7 +77,6 @@ class Perceptron(n_classes:Int) {
   // Number of instances seen - used to measure how 'old' each total is
   var seen:TimeStamp = 0
   
-  type Score = Float
   type ClassVector = Vector[Score]
 
   def predict(classnum_vector : ClassVector) : ClassNum = { // Return best class guess for this vector of weights
@@ -217,6 +218,34 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
   //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
   
   //val perceptron = new Perceptron(classes)
+  
+  def get_features(sentence:Sentence, i:Int):Set[Feature] = {
+    val feature_set = mutable.Set[Feature]()  // Could actually do this one as an immutable (since features are easily enumerated)
+    feature_set += Feature("bias",     "")  // It's useful to have a constant feature, which acts sort of like a prior
+    
+    feature_set += Feature("word",       sentence(i).norm)  
+    feature_set += Feature("i suffix",   sentence(i).norm.takeRight(3))  
+    feature_set += Feature("i pref1",    sentence(i).norm.take(1))  
+    
+    feature_set += Feature("i-1 tag",    sentence(i-1).pos)  
+    feature_set += Feature("i-2 tag",    sentence(i-2).pos)  
+    feature_set += Feature("prev2 tags", s"${sentence(i-1).pos} ${sentence(i-2).pos}")  
+    
+    feature_set += Feature("w+tag",      s"${sentence(i).norm} ${sentence(i-1).pos}")  
+    
+    feature_set += Feature("w-1",        sentence(i-1).norm)  
+    feature_set += Feature("w-1 suffix", sentence(i-1).norm.takeRight(3))  
+    
+    feature_set += Feature("w-2",        sentence(i-2).norm)  
+    
+    feature_set += Feature("w+1",        sentence(i+1).norm)  
+    feature_set += Feature("w+1 suffix", sentence(i+1).norm.takeRight(3))  
+    
+    feature_set += Feature("w+2",        sentence(i+2).norm)  
+    feature_set.toSet
+  }
+  
+
 }
 
 
@@ -350,21 +379,18 @@ class Learn {
   def read_CONLL(path:String): List[Sentence] = {
     println(s"read_CONLL(${path})")
     val source = scala.io.Source.fromFile(path).mkString
-    val sections = source.split("\\n\\n").toList
-    //println(s"Sections : ${sections.mkString}")
+    val sections = source.split("\\n\\n").toList                 //;println(s"Sections : ${sections.mkString}")
     
     val sentences = sections.map(
-      s => {
-        //print(s"section = ${s}\n")
+      s => {                                                     //;println(s"Section = ${s}")
         val lines = s.split("\\n").toList
-        val body  = lines.map( l => {
-          //println(s"Line = ${l}")
+        val body  = lines.map( l => {                            //;println(s"Line = ${l}")
           val arr = l.split("\\s+")
           val (raw, pos, dep) = (arr(0), arr(1), arr(2).toInt)
           val dep_ex = if(dep==0) (lines.length+1) else dep
           WordData(raw, pos, dep_ex)
         })
-        WordData("<start>", "<start>") :: ( body :+ WordData("ROOT", "ROOT") )
+        WordData("%START%", "%START%") :: WordData("%PAD%", "%PAD%") :: ( body :+ WordData("%ROOT%", "%ROOT%") :+ WordData("%END%", "%END%") )
       }
     )
     sentences
@@ -396,8 +422,11 @@ object Main extends App {
          //if(i<5)
       ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
   
-      //val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences)
-      benchmark( Unit=>{ val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
+      val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences)
+      //benchmark( Unit=>{ val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
+      
+      
+      
     }
     else {
       printf("Usage :\nrun {learn}\n")
