@@ -21,7 +21,24 @@ package object ConciseGreedyDependencyParserObj {
   type FeatureName = String
   type FeatureData = String
   type Word = String
-  type Sentence = Vector[Word]
+  type Sentence = Vector[WordData]
+  
+  case class WordData(raw:Word, pos:ClassName="", dep:ClassName="") {
+    lazy val norm:Word = {
+      raw.toLowerCase
+    }
+  }
+/*  
+    def normalize_sentence(word):
+        if '-' in word and word[0] != '-':
+            return '!HYPHEN'
+        elif word.isdigit() and len(word) == 4:
+            return '!YEAR'
+        elif word[0].isdigit():
+            return '!DIGITS'
+        else:
+            return word.lower()
+*/
 }
 
 import ConciseGreedyDependencyParserObj._
@@ -72,8 +89,8 @@ class Perceptron(n_classes:Int) {
       .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
       .foldLeft( Vector.fill(n_classes)(0:Float) ){ case (acc, (Feature(name,data), score)) => {  // Start with a zero classnum->score vector
         learning
-          .getOrElse(name, Map.empty[String,ClassToWeightLearner])   // This is first level of feature access
-            .getOrElse(data, Map.empty[ ClassNum,  WeightLearner ])       // This is second level of feature access and is a Map of ClassNums to Weights (or NOOP if not there)
+          .getOrElse(name, Map[String,ClassToWeightLearner]())   // This is first level of feature access
+            .getOrElse(data, Map[ ClassNum,  WeightLearner ]())       // This is second level of feature access and is a Map of ClassNums to Weights (or NOOP if not there)
               .foldLeft( acc ){ (acc_for_feature, cn_wl) => { // Add each of the class->weights onto our score vector
                 val classnum:ClassNum = cn_wl._1
                 val weight_learner:WeightLearner = cn_wl._2
@@ -88,9 +105,9 @@ class Perceptron(n_classes:Int) {
       for {
         feature <- features
       } {
-        val cn_wl = learning.getOrElse(feature.name, Map.empty[String,ClassToWeightLearner]).getOrElse(feature.data, mutable.Map.empty[ ClassNum,  WeightLearner ])
-        cn_wl.update(guess, cn_wl.getOrElse(guess, WeightLearnerInitial ).update(-1))  // This REALLY OUGHT to exist, since it is what I chose (incorrectly)...
-        cn_wl.update(truth, cn_wl.getOrElse(truth, WeightLearnerInitial ).update(+1))  // This could easily be a new entry
+        val cn_wl = learning.getOrElse(feature.name, Map[String,ClassToWeightLearner]()).getOrElse(feature.data, mutable.Map[ClassNum,  WeightLearner]())
+        cn_wl.update(guess, cn_wl.getOrElse(guess, WeightLearnerInitial).update(-1))  // This REALLY OUGHT to exist, since it is what I chose (incorrectly)...
+        cn_wl.update(truth, cn_wl.getOrElse(truth, WeightLearnerInitial).update(+1))  // This could easily be a new entry
       }
     }
   }
@@ -138,35 +155,63 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
 }
 
 object Tagger {
-  // Make a tag dictionary for single-tag words : So that they can be 'resolved' immediately
-  // Also builds the class list
-  def _make_tagdict(training_sentences: List[Sentence]) = {
+  
+  // Make a tag dictionary for single-tag words : So that they can be 'resolved' immediately, as well as the class list
+  def classes_and_tagdict(training_sentences: List[Sentence]): (Vector[ClassName], Map[Word, ClassNum])  = {
+    // First, get the set of classnames, and the counts for all the words and tags
+//    val (class_set:Set[ClassName], full_map:Map[Word, Map[ClassName, Int]]) =
+
+    val (class_set, full_map) =
+      training_sentences.foldLeft( ( Set[ClassName](), Map[ Word, Map[ClassName, Int] ]() ) ) { case ( (classes, map), sentence ) => {
+        sentence.foldLeft( (classes, map) ) { case ( (classes, map), word_data) => {
+          val count = map.getOrElse(word_data.norm, Map[ClassName, Int]()).getOrElse(word_data.pos, 0:Int)
+          ( 
+            classes + word_data.pos, 
+            map + (( word_data.norm, 
+                     map.getOrElse(word_data.norm, Map[ClassName, Int]()) 
+                     + ((word_data.pos, count+1)) 
+                  )) 
+          )
+/*          
+          if(map.contains(word_data.norm)) {
+            if(map(word_data.norm).contains(word_data.pos)) {
+              val count = map.getOrElse(word_data.norm, Map[ClassName, Int]()).getOrElse(word_data.pos, 0:Int)
+              ( cl, map + (( word_data.norm, Map[ClassName, Int]((word_data.pos, count+1)) )) )
+            }
+            else { // Not in map yet : Instantiate it
+              ( cl, map + ( word_data.norm, (word_data.pos, 1) ) )
+            }
+          }
+          else {
+            ( cl, map + ( word_data.norm, (word_data.pos, 1) ) )
+          }
+*/          
+        }}
+      }}
+      
+    // Convert the set of classes into a nice map, with indexer
+    val classes = class_set.toVector.sorted  // This is (likely) alphabetical
+    val class_map = classes.zipWithIndex.toMap
+
+    val freq_thresh = 20
+    val ambiguity_thresh = 0.97
     
-    
+    // Now, go through the full_map, and work out which are worth 'resolving' immediately - and return a suitable tagdict
+    val tag_dict = mutable.Map[Word, ClassNum]().withDefaultValue(0)
+    for {
+      (norm, classes) <- full_map
+      if(classes.values.sum >= freq_thresh)  // ignore if not enough samples
+      (cl, v) <- classes
+      if(v >= classes.values.sum * ambiguity_thresh) // Must be concentrated (in fact, cl must be unique... since >50%)
+    } {
+      tag_dict(norm) = class_map(cl)
+      print(s"${norm}=${cl}")
+    }
+    (classes, tag_dict.toMap)
   }
+  
 }
 
-/*
-    def _make_tagdict(self, sentences):
-        counts = defaultdict(lambda: defaultdict(int))
-        for sent in sentences:
-            #print type(sent[1])
-            for word, tag in zip(sent[0], sent[1]):
-                #print " %s : %s" % (word, tag, )
-                counts[word][tag] += 1
-                self.classes.add(tag)
-        freq_thresh = 20
-        ambiguity_thresh = 0.97
-        for word, tag_freqs in counts.items():
-            tag, mode = max(tag_freqs.items(), key=lambda item: item[1])
-            n = sum(tag_freqs.values())
-            # Don't add rare words to the tag dictionary
-            # Only add quite unambiguous words
-            if n >= freq_thresh and (float(mode) / n) >= ambiguity_thresh:
-                self.tagdict[word] = tag
-                print "_make_tagdict added : %10s -> %10s" % (word, tag, )
-
-*/  
 
 
 /* 
