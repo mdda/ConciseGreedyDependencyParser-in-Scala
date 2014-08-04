@@ -368,14 +368,17 @@ def read_conll_mdda(loc):
 
 class Learn {
   def read_CONLL(path:String): List[Sentence] = {
-    print(s"read_CONLL(${path}})")
-    val buffered_source = Source.fromFile(path)
-    val sections = buffered_source.toString.split("\n\n").toList
+    println(s"read_CONLL(${path})")
+    val source = Source.fromFile(path).mkString
+    val sections = source.split("\\n\\n").toList
+    //println(s"Sections : ${sections.mkString}")
     
     val sentences = sections.map(
       s => {
-        val lines = s.split("\n").toList
+        //print(s"section = ${s}\n")
+        val lines = s.split("\\n").toList
         val body  = lines.map( l => {
+          //println(s"Line = ${l}")
           val arr = l.split("\\s+")
           val (raw, pos, dep) = (arr(0), arr(1), arr(2).toInt)
           val dep_ex = if(dep!=0) dep else (lines.length+1)
