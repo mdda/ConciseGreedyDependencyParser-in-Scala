@@ -18,16 +18,15 @@ import scala.io.{Source}
 package object ConciseGreedyDependencyParserObj {
   type ClassNum  = Int
   type ClassName = String
+  type DependencyIndex = Int
+  
   type FeatureName = String
   type FeatureData = String
   type Word = String
-  type Sentence = Vector[WordData]
+  type Sentence = List[WordData]
   
-  case class WordData(raw:Word, pos:ClassName="", dep:ClassName="") {
+  case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1)) {
     lazy val norm:Word = {
-      raw.toLowerCase
-    }
-  }
 /*  
     def normalize_sentence(word):
         if '-' in word and word[0] != '-':
@@ -39,6 +38,9 @@ package object ConciseGreedyDependencyParserObj {
         else:
             return word.lower()
 */
+      raw.toLowerCase
+    }
+  }
 }
 
 import ConciseGreedyDependencyParserObj._
@@ -148,12 +150,6 @@ class Perceptron(n_classes:Int) {
 
 }
 
-class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
-  def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
-
-  //val perceptron = new Perceptron(classes)
-}
-
 object Tagger {
   
   // Make a tag dictionary for single-tag words : So that they can be 'resolved' immediately, as well as the class list
@@ -212,6 +208,13 @@ object Tagger {
   
 }
 
+class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
+  val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // Would throw exception if not found
+  //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
+  
+  //val perceptron = new Perceptron(classes)
+}
+
 
 
 /* 
@@ -248,18 +251,6 @@ class PerceptronTagger(object):
         self._make_tagdict(sentences)
         self.model = Perceptron(self.classes)
 
-    """  UNUSED : THERE IS NO end_training here...
-    def train(self, sentences, save_loc=None, nr_iter=5):
-        '''Train a model from sentences, and save it at save_loc. nr_iter
-        controls the number of Perceptron training iterations.'''
-        self.start_training(sentences)
-        for iter_ in range(nr_iter):
-            for words, tags in sentences:
-                self.train_one(words, tags)
-            random.shuffle(sentences)
-        self.end_training(save_loc)
-    """
-    
     def save(self):
         # Pickle as a binary file
         pickle.dump((self.model.weights, self.tagdict, self.classes),
@@ -280,16 +271,6 @@ class PerceptronTagger(object):
         w_td_c = pickle.load(open(loc, 'rb'))
         self.model.weights, self.tagdict, self.classes = w_td_c
         self.model.classes = self.classes
-
-    def _normalize(self, word):
-        if '-' in word and word[0] != '-':
-            return '!HYPHEN'
-        elif word.isdigit() and len(word) == 4:
-            return '!YEAR'
-        elif word[0].isdigit():
-            return '!DIGITS'
-        else:
-            return word.lower()
 
     def _get_features(self, i, word, context, prev, prev2):
         '''Map tokens into a feature representation, implemented as a
@@ -317,25 +298,6 @@ class PerceptronTagger(object):
         add('i+2 word', context[i+2])
         return features
 
-    def _make_tagdict(self, sentences):
-        '''Make a tag dictionary for single-tag words.'''
-        counts = defaultdict(lambda: defaultdict(int))
-        for sent in sentences:
-            #print type(sent[1])
-            for word, tag in zip(sent[0], sent[1]):
-                #print " %s : %s" % (word, tag, )
-                counts[word][tag] += 1
-                self.classes.add(tag)
-        freq_thresh = 20
-        ambiguity_thresh = 0.97
-        for word, tag_freqs in counts.items():
-            tag, mode = max(tag_freqs.items(), key=lambda item: item[1])
-            n = sum(tag_freqs.values())
-            # Don't add rare words to the tag dictionary
-            # Only add quite unambiguous words
-            if n >= freq_thresh and (float(mode) / n) >= ambiguity_thresh:
-                self.tagdict[word] = tag
-                print "_make_tagdict added : %10s -> %10s" % (word, tag, )
 
 def _pc(n, d):
     return (float(n) / d) * 100
@@ -356,26 +318,6 @@ def train(parser, sentences, nr_iter):
             parser.tagger.model.average_weights()
     print 'Averaging weights'
     parser.model.average_weights()
-
-
-def read_conll_mdda(loc):
-    print "read_conll_mdda(%s)" % (loc, )
-    for sent_str in open(loc).read().strip().split('\n\n'):
-        lines = [line.split() for line in sent_str.split('\n')]
-        
-        words = DefaultList('')
-        tags  = DefaultList('')
-        heads = [None]
-        for i, (word, pos, head) in enumerate(lines):
-            #print "%d = %s" % (i, word)
-            words.append(intern(word))
-            #words.append(intern(normalize(word)))
-            tags.append(intern(pos))
-            heads.append(int(head) if head != '0' else len(lines) + 1) # mdda : don't increment our file...
-        pad_tokens(words)
-        pad_tokens(tags)
-        #print "END OF SENTENCE"
-        yield words, tags, heads
 
 
 def pad_tokens(tokens):
@@ -402,13 +344,65 @@ def learn_mdda(model_dir, train_loc, load_if_exists=False):
   
 */  
 
+
+/*
+def read_conll_mdda(loc):
+    print "read_conll_mdda(%s)" % (loc, )
+    for sent_str in open(loc).read().strip().split('\n\n'):
+        lines = [line.split() for line in sent_str.split('\n')]
+        
+        words = DefaultList('')
+        tags  = DefaultList('')
+        heads = [None]
+        for i, (word, pos, head) in enumerate(lines):
+            #print "%d = %s" % (i, word)
+            words.append(intern(word))
+            #words.append(intern(normalize(word)))
+            tags.append(intern(pos))
+            heads.append(int(head) if head != '0' else len(lines) + 1) # mdda : don't increment our file...
+        pad_tokens(words)
+        pad_tokens(tags)
+        #print "END OF SENTENCE"
+        yield words, tags, heads
+*/
+
+class Learn {
+  def read_CONLL(path:String): List[Sentence] = {
+    print(s"read_CONLL(${path}})")
+    val buffered_source = Source.fromFile(path)
+    val sections = buffered_source.toString.split("\n\n").toList
+    
+    val sentences = sections.map(
+      s => {
+        val lines = s.split("\n").toList
+        val body  = lines.map( l => {
+          val arr = l.split("\\s+")
+          val (raw, pos, dep) = (arr(0), arr(1), arr(2).toInt)
+          val dep_ex = if(dep!=0) dep else (lines.length+1)
+          WordData(raw, pos, dep_ex)
+        })
+        WordData("<start>", "<start>") :: ( body :+ WordData("ROOT", "ROOT") )
+      }
+    )
+    sentences
+  }
+  
+  
+}
+
+
+
 object Main extends App {
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
     if(args.contains("learn")) {
       // learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
+      val l = new Learn
+      val sentences = l.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp")
+    }
+    else {
+      printf("Usage :\nrun {learn}\n")
     }
     
-    printf("Usage :\nrun {learn}\n")
   }
 }
