@@ -150,7 +150,7 @@ class Perceptron(n_classes:Int) {
 
 }
 
-object Tagger {
+object Tagger {  // Here, tag == Part-of-Speech
   
   // Make a tag dictionary for single-tag words : So that they can be 'resolved' immediately, as well as the class list
   def classes_and_tagdict(training_sentences: List[Sentence]): (Vector[ClassName], Map[Word, ClassNum])  = {
@@ -250,7 +250,7 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
     for {
       sentence <- sentences
       i <- 2 until sentence.length-2
-      if(! tag_dict.contains(sentence(i).norm)) // Don't do anything if we already 'know' it
+      if(! tag_dict.contains(sentence(i).norm)) // Don't do anything if we already 'know' the right PoS
     } {
       val features = get_features(sentence, i)
       val score = perceptron.score(features, perceptron.current)
