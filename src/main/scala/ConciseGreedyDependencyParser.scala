@@ -13,7 +13,6 @@ import json._
 //import binary._
 
 import java.io.{PrintWriter, File}
-import scala.io.{Source}
 
 package object ConciseGreedyDependencyParserObj {
   type ClassNum  = Int
@@ -139,7 +138,7 @@ class Perceptron(n_classes:Int) {
     //val unpickled = pickled.unpickle[Wrapper]
     //learning =  // Hmm : this is a val of a mutable.Map, may need to copy data in explicitly
     
-    val buffered_source = Source.fromFile(path)
+    val buffered_source = scala.io.Source.fromFile(path)
     val unpickled = buffered_source.toString.unpickle[learning.type]
     //val unpickled = learning
     
@@ -369,7 +368,7 @@ def read_conll_mdda(loc):
 class Learn {
   def read_CONLL(path:String): List[Sentence] = {
     println(s"read_CONLL(${path})")
-    val source = Source.fromFile(path).mkString
+    val source = scala.io.Source.fromFile(path).mkString
     val sections = source.split("\\n\\n").toList
     //println(s"Sections : ${sections.mkString}")
     
@@ -401,7 +400,19 @@ object Main extends App {
     if(args.contains("learn")) {
       // learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
       val l = new Learn
-      val sentences = l.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp")
+      
+      /*
+      sentences = list()
+      for f in [f for f in os.listdir(train_loc) if os.path.isfile(os.path.join(train_loc, f)) and f.endswith(".dp")]:
+          sentences.extend(list(read_conll_mdda(os.path.join(train_loc, f))))
+      */
+      val sentences = (for (
+         (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.sorted.zipWithIndex
+         if( file.getName.endsWith(".dp") )
+         if(i<5)
+      ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
+      
+      //val sentences = l.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp")
     }
     else {
       printf("Usage :\nrun {learn}\n")
