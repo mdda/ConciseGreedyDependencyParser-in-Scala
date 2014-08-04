@@ -187,6 +187,7 @@ object Tagger {
     // Convert the set of classes into a nice map, with indexer
     val classes = class_set.toVector.sorted  // This is (likely) alphabetical
     val class_map = classes.zipWithIndex.toMap
+    println(s"Classes = [${classes.mkString(",")}]")
 
     val freq_thresh = 20
     val ambiguity_thresh = 0.97
@@ -200,7 +201,7 @@ object Tagger {
       if(v >= classes.values.sum * ambiguity_thresh) // Must be concentrated (in fact, cl must be unique... since >50%)
     } {
       tag_dict(norm) = class_map(cl)
-      print(s"${norm}=${cl}")
+      println(s"${norm}=${cl}")
     }
     (classes, tag_dict.toMap)
   }
@@ -319,11 +320,6 @@ def train(parser, sentences, nr_iter):
     parser.model.average_weights()
 
 
-def pad_tokens(tokens):
-    tokens.insert(0, '<start>')
-    tokens.append('ROOT')
-
-
 def learn_mdda(model_dir, train_loc, load_if_exists=False):
     if not os.path.exists(model_dir):
         os.mkdir(model_dir)
@@ -331,10 +327,12 @@ def learn_mdda(model_dir, train_loc, load_if_exists=False):
     random.seed(04)   # Has some successes, the failure on assert(gold_moves)
 
     parser = Parser(load=load_if_exists)
+    
     sentences = list()
     for f in [f for f in os.listdir(train_loc) if os.path.isfile(os.path.join(train_loc, f)) and f.endswith(".dp")]:
         sentences.extend(list(read_conll_mdda(os.path.join(train_loc, f))))
         #break # Just 1 set of sentences to start
+        
     #print sentences
     train(parser, sentences, nr_iter=50)
     parser.save()
@@ -343,27 +341,6 @@ def learn_mdda(model_dir, train_loc, load_if_exists=False):
   
 */  
 
-
-/*
-def read_conll_mdda(loc):
-    print "read_conll_mdda(%s)" % (loc, )
-    for sent_str in open(loc).read().strip().split('\n\n'):
-        lines = [line.split() for line in sent_str.split('\n')]
-        
-        words = DefaultList('')
-        tags  = DefaultList('')
-        heads = [None]
-        for i, (word, pos, head) in enumerate(lines):
-            #print "%d = %s" % (i, word)
-            words.append(intern(word))
-            #words.append(intern(normalize(word)))
-            tags.append(intern(pos))
-            heads.append(int(head) if head != '0' else len(lines) + 1) # mdda : don't increment our file...
-        pad_tokens(words)
-        pad_tokens(tags)
-        #print "END OF SENTENCE"
-        yield words, tags, heads
-*/
 
 class Learn {
   def read_CONLL(path:String): List[Sentence] = {
@@ -398,21 +375,17 @@ object Main extends App {
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
     if(args.contains("learn")) {
-      // learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
       val l = new Learn
       
-      /*
-      sentences = list()
-      for f in [f for f in os.listdir(train_loc) if os.path.isfile(os.path.join(train_loc, f)) and f.endswith(".dp")]:
-          sentences.extend(list(read_conll_mdda(os.path.join(train_loc, f))))
-      */
-      val sentences = (for (
-         (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.sorted.zipWithIndex
+      //val sentences = l.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
+      val training_sentences = (for (
+         (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
          if( file.getName.endsWith(".dp") )
-         if(i<5)
+         //if(i<5)
       ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
       
-      //val sentences = l.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp")
+      val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences)
+      
     }
     else {
       printf("Usage :\nrun {learn}\n")
