@@ -357,7 +357,7 @@ class Learn {
           //println(s"Line = ${l}")
           val arr = l.split("\\s+")
           val (raw, pos, dep) = (arr(0), arr(1), arr(2).toInt)
-          val dep_ex = if(dep!=0) dep else (lines.length+1)
+          val dep_ex = if(dep==0) (lines.length+1) else dep
           WordData(raw, pos, dep_ex)
         })
         WordData("<start>", "<start>") :: ( body :+ WordData("ROOT", "ROOT") )
@@ -372,6 +372,14 @@ class Learn {
 
 
 object Main extends App {
+  def benchmark(f:Unit=>Unit, iters:Int=10, warmup:Int=5) = {
+    for(i <- 0 to warmup) { f() }
+    val t0 = System.nanoTime()
+    for(i <- 0 to iters)  { f() }
+    val t1 = System.nanoTime()
+    println(f"Elapsed time = ${(t1-t0)/iters/1000/1000.0}%7.2fms, averaged over ${iters} iterations, with ${warmup} iterations warm-up")
+  }
+  
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
     if(args.contains("learn")) {
@@ -383,9 +391,8 @@ object Main extends App {
          if( file.getName.endsWith(".dp") )
          //if(i<5)
       ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
-      
-      val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences)
-      
+  
+      benchmark( Unit=>{ val (classes, tagdict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
     }
     else {
       printf("Usage :\nrun {learn}\n")
