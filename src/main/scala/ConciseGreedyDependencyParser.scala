@@ -97,6 +97,7 @@ class Perceptron(n_classes:Int) {
                 val classnum:ClassNum = cn_wl._1
                 val weight_learner:WeightLearner = cn_wl._2
                 acc_for_feature.updated(classnum, acc_for_feature(classnum) + score * score_method(weight_learner))
+                //acc_for_feature(classnum) += score * score_method(weight_learner)
               }}
       }}
   }
@@ -217,46 +218,85 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
   //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
   
   val perceptron = new Perceptron(classes.length)
-  
-  def get_features(sentence:Sentence, i:Int):Map[Feature,Score] = {
+
+/*  
+  class TaggerSentence(sentence:Sentence) {
+    var pos = mutable.Array[ClassName]()
+    
+    def apply(idx: Int): WordData = {
+      if(idx>=0 || idx<sentence.length) {
+        sentence(idx) 
+      } 
+      else idx match {
+        case -2 => WordData("%START%", "%START%")
+        case -1 => WordData("%PAD%", "%PAD%")
+        case _ => if(idx>sentence.length) WordData("%END%", "%END%") else WordData("%ROOT%", "%ROOT%")
+      }
+    }
+  }
+*/
+
+  def get_features(word:List[Word], pos:List[ClassName], i:Int):Map[Feature,Score] = {
     val feature_set = mutable.Set[Feature]() 
     feature_set += Feature("bias",       "")  // It's useful to have a constant feature, which acts sort of like a prior
     
-    feature_set += Feature("word",       sentence(i).norm)  
-    feature_set += Feature("i suffix",   sentence(i).norm.takeRight(3))  
-    feature_set += Feature("i pref1",    sentence(i).norm.take(1))  
+    feature_set += Feature("word",       word(i))  
+    feature_set += Feature("i suffix",   word(i).takeRight(3))  
+    feature_set += Feature("i pref1",    word(i).take(1))  
     
-    feature_set += Feature("i-1 tag",    sentence(i-1).pos)  
-    feature_set += Feature("i-2 tag",    sentence(i-2).pos)  
-    feature_set += Feature("prev2 tags", s"${sentence(i-1).pos} ${sentence(i-2).pos}")  
+    feature_set += Feature("i-1 tag",    pos(i-1))  
+    feature_set += Feature("i-2 tag",    pos(i-2))  
+    feature_set += Feature("prev2 tags", s"${pos(i-1)} ${pos(i-2)}")  
     
-    feature_set += Feature("w+tag",      s"${sentence(i).norm} ${sentence(i-1).pos}")  
+    feature_set += Feature("w+tag",      s"${word(i)} ${pos(i-1)}")  
     
-    feature_set += Feature("w-1",        sentence(i-1).norm)  
-    feature_set += Feature("w-1 suffix", sentence(i-1).norm.takeRight(3))  
+    feature_set += Feature("w-1",        word(i-1))  
+    feature_set += Feature("w-1 suffix", word(i-1).takeRight(3))  
     
-    feature_set += Feature("w-2",        sentence(i-2).norm)  
+    feature_set += Feature("w-2",        word(i-2))  
     
-    feature_set += Feature("w+1",        sentence(i+1).norm)  
-    feature_set += Feature("w+1 suffix", sentence(i+1).norm.takeRight(3))  
+    feature_set += Feature("w+1",        word(i+1))  
+    feature_set += Feature("w+1 suffix", word(i+1).takeRight(3))  
     
-    feature_set += Feature("w+2",        sentence(i+2).norm)  
+    feature_set += Feature("w+2",        word(i+2))  
     
     // All weights on this set of features are ==1
     feature_set.map( f => (f, 1:Score) ).toMap
   }
 
-  def train(sentences:List[Sentence]):Unit = {
+  def train(sentences:List[Sentence]):Unit = sentences.foreach( train_one )
+    
+  def train_one(sentence:Sentence):Unit = {
+    //val context:List[Word] = ("%START%" :: "%PAD%" :: (sentence.map( _.norm ) :+ "%ROOT%" :+ "%END%"))
+    //val context:List[Word] = (List[Word]("%START%","%PAD%") ::: sentence.map( _.norm ) ::: List[Word]("%ROOT%","%END%"))
+    val words:List[Word] = (List("%START%","%PAD%") ::: sentence.map( _.norm ) ::: List("%ROOT%","%END%"))
+    val truth:List[ClassNum] = (List(-1,-1) ::: sentence.map( wd => getClassNum(wd.pos) ) ::: List(-1,-1))
+        
+    words.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
+      val guess = tag_dict.getOrElse(word_norm, {   // Don't do the feature scoring if we already 'know' the right PoS
+        val features = get_features(words, tags, i)
+        val score = perceptron.score(features, perceptron.current)
+        val guessed = perceptron.predict( score )
+        
+        // Update the perceptron
+        perceptron.update( truth(i), guessed, features.keys)
+        
+        guessed // Use the guessed value for next prediction/learning step (rather than the truth...)
+      }) 
+      (i+1, tags :+ classes(guess))
+    }}
+
+/*    
     for {
-      sentence <- sentences
-      i <- 2 until sentence.length-2
+      i <- 0 until sentence.length
       if(! tag_dict.contains(sentence(i).norm)) // Don't do anything if we already 'know' the right PoS
     } {
-      val features = get_features(sentence, i)
+      val features = get_features(tsentence, i)
       val score = perceptron.score(features, perceptron.current)
       val guessed = perceptron.predict( score )
       perceptron.update( getClassNum(sentence(i).pos), guessed, features.keys)
     }
+*/
     
   }
 
@@ -416,7 +456,8 @@ class Learn {
           val dep_ex = if(dep==0) (lines.length+1) else dep
           WordData(raw, pos, dep_ex)
         })
-        WordData("%START%", "%START%") :: WordData("%PAD%", "%PAD%") :: ( body :+ WordData("%ROOT%", "%ROOT%") :+ WordData("%END%", "%END%") )
+        //WordData("%START%", "%START%") :: WordData("%PAD%", "%PAD%") :: ( body :+ WordData("%ROOT%", "%ROOT%") :+ WordData("%END%", "%END%") )
+        body  // Don't pretty up the sentence itself
       }
     )
     sentences
