@@ -57,13 +57,14 @@ class Perceptron(n_classes:Int) {
   type TimeStamp = Int
   
   case class WeightLearner(current:Int, total:Int, ts:TimeStamp) {
-    def update(change:Int) = {
-      new WeightLearner(current + change, total + current*(seen-ts), seen)
+    def add_change(change:Int) = {
+      WeightLearner(current + change, total + current*(seen-ts), seen)
     }
   }
-  def WeightLearnerInitial = WeightLearner(0, 0, seen)
+  //def WeightLearnerInitial(s:TimeStamp) = WeightLearner(0, 0, s)
   
   type ClassToWeightLearner = mutable.Map[ ClassNum,  WeightLearner ]  // tells us the stats of each class (if present) 
+  //type ClassToWeightLearner = WithDefault[mutable.Map[ ClassNum,  WeightLearner ], f=>WeightLearner() ]  // tells us the stats of each class (if present) 
   
   // The following are keyed on feature (to keep tally of total numbers into each, and when)(for the TRAINING phase)
   val learning =  mutable.Map.empty[
@@ -108,17 +109,16 @@ class Perceptron(n_classes:Int) {
       for {
         feature <- features
       } {
-        learning.getOrElseUpdate(feature.name, mutable.Map[FeatureName, ClassToWeightLearner]().withDefaultValue( mutable.Map[ClassNum,WeightLearner]().withDefaultValue( WeightLearnerInitial ) ))
-                .getOrElseUpdate(feature.data, mutable.Map[ClassNum,           WeightLearner]().withDefaultValue( WeightLearnerInitial ))
-                      
-        //full_map.getOrElseUpdate(word_data.norm, mutable.Map[ClassName, Int]().withDefaultValue(0))(word_data.pos) += 1
-        
-        //cn_wl.update(guess, cn_wl.getOrElse(guess, WeightLearnerInitial).update(-1))  // This REALLY OUGHT to exist, since it is what I chose (incorrectly)...
-        //cn_wl.update(truth, cn_wl.getOrElse(truth, WeightLearnerInitial).update(+1))  // This could easily be a new entry
-        
+        learning.getOrElseUpdate(feature.name, mutable.Map[FeatureData, ClassToWeightLearner]() )
+        var this_map = learning(feature.name).getOrElseUpdate(feature.data, mutable.Map[ClassNum, WeightLearner]() )
+                
         println(s"  update [${feature.name},${feature.data}] : ${learning(feature.name)(feature.data)}")
-        learning(feature.name)(feature.data).getOrElseUpdate(guess, WeightLearnerInitial).update(-1)
-        learning(feature.name)(feature.data).getOrElseUpdate(truth, WeightLearnerInitial).update(+1)  // This could easily be a new entry
+        if(this_map.contains(guess)) {
+          this_map.update(guess, this_map(guess).add_change(-1))
+        }
+        this_map.update(truth, this_map.getOrElse( truth, WeightLearner(0,0,seen) ).add_change(+1))
+        
+        learning(feature.name)(feature.data) = this_map
       }
     }
   }
@@ -477,6 +477,9 @@ object Main extends App {
       val tagger = new Tagger("", classes, tag_dict)
       //tagger.train(training_sentences)
       
+      tagger.train_one(training_sentences(0))
+      tagger.train_one(training_sentences(0))
+      tagger.train_one(training_sentences(0))
       tagger.train_one(training_sentences(0))
       tagger.train_one(training_sentences(0))
       
