@@ -465,8 +465,9 @@ object Main extends App {
       //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
       tagger.train(training_sentences)
       
-      benchmark( Unit=>{ tagger.train_one(training_sentences(0)) }, 50) // Mainly 'score'
-      //tagger.train_one(training_sentences(0))
+      //benchmark( Unit=>{ tagger.train_one(training_sentences(0)) }, 50) // Mainly 'score'
+      println(s"original = ${training_sentences(0)}")
+      println(s"tagged = ${tagger.tag(training_sentences(0))}")
       
     }
     else {
