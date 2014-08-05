@@ -28,18 +28,10 @@ package object ConciseGreedyDependencyParserObj {
   
   case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1)) {
     lazy val norm:Word = {
-/*  
-    def normalize_sentence(word):
-        if '-' in word and word[0] != '-':
-            return '!HYPHEN'
-        elif word.isdigit() and len(word) == 4:
-            return '!YEAR'
-        elif word[0].isdigit():
-            return '!DIGITS'
-        else:
-            return word.lower()
-*/
-      raw.toLowerCase
+      if      (raw.contains('-') && raw(0) != '-')        "!HYPHEN"
+      else if (raw.length == 4 && raw.forall(_.isDigit))  "!YEAR"
+      else if (raw(0).isDigit)                            "!DIGITS"
+      else                                                raw.toLowerCase
     }
   }
 }
@@ -214,7 +206,7 @@ object Tagger {  // Here, tag == Part-of-Speech
     }
     
     // First, get the set of classnames, and the counts for all the words and tags
-    val (class_set, full_map) = if(true) functional_approach() else mutational_approach()
+    val (class_set, full_map) = if(false) functional_approach() else mutational_approach()
     
     // Convert the set of classes into a nice map, with indexer
     val classes = class_set.toVector.sorted  // This is alphabetical
@@ -425,9 +417,10 @@ object Main extends App {
       //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
       tagger.train(training_sentences)
       
-      //benchmark( Unit=>{ tagger.train_one(training_sentences(0)) }, 50) // Mainly 'score'
-      println(s"original = ${training_sentences(0)}")
-      println(s"tagged = ${tagger.tag(training_sentences(0))}")
+      val s = training_sentences(0)
+      //benchmark( Unit=>{ tagger.train_one(s) }, 50) // Mainly 'score'
+      println(s"original = ${s}")
+      println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
       
     }
     else {
