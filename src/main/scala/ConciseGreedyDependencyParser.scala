@@ -88,7 +88,7 @@ class Perceptron(n_classes:Int) {
   def current(w : WeightLearner):Float =  w.current
   
   def score(features: Map[Feature, Score], score_method: WeightLearner => Float): ClassVector = { // Return 'dot-product' score for all classes
-    if(true) { // This is the functional version : 3023ms for 1 train_all
+    if(false) { // This is the functional version : 3023ms for 1 train_all, and 0.57ms for a sentence
       features
         .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
         .foldLeft( Vector.fill(n_classes)(0:Float) ){ case (acc, (Feature(name,data), score)) => {  // Start with a zero classnum->score vector
@@ -103,7 +103,7 @@ class Perceptron(n_classes:Int) {
                 }}
         }}
     }
-    else { //  This is the mutable version : 2493ms for 1 train_all
+    else { //  This is the mutable version : 2493ms for 1 train_all, and 0.45ms for a sentence
       val scores = (new Array[Score](n_classes)) // All 0?
       
       features
@@ -301,18 +301,6 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
     
   }
 
-/*  
-    def train_one(self, words, tags):
-        prev, prev2 = START
-        context = START + [self._normalize(w) for w in words] + END
-        for i, word in enumerate(words):
-            guess = self.tagdict.get(word)
-            if not guess:
-                feats = self._get_features(i, word, context, prev, prev2)
-                guess = self.model.predict(feats)
-                self.model.update(tags[i], guess, feats)
-            prev2 = prev; prev = guess
-*/
 }
 
 
@@ -356,47 +344,10 @@ class PerceptronTagger(object):
         pickle.dump((self.model.weights, self.tagdict, self.classes),
                     open(PerceptronTagger.model_loc, 'wb'), -1)
 
-    def train_one(self, words, tags):
-        prev, prev2 = START
-        context = START + [self._normalize(w) for w in words] + END
-        for i, word in enumerate(words):
-            guess = self.tagdict.get(word)
-            if not guess:
-                feats = self._get_features(i, word, context, prev, prev2)
-                guess = self.model.predict(feats)
-                self.model.update(tags[i], guess, feats)
-            prev2 = prev; prev = guess
-
     def load(self, loc):
         w_td_c = pickle.load(open(loc, 'rb'))
         self.model.weights, self.tagdict, self.classes = w_td_c
         self.model.classes = self.classes
-
-    def _get_features(self, i, word, context, prev, prev2):
-        '''Map tokens into a feature representation, implemented as a
-        {hashable: float} dict. If the features change, a new model must be
-        trained.'''
-        def add(name, *args):
-            features[' '.join((name,) + tuple(args))] += 1
-
-        i += len(START)
-        features = defaultdict(int)
-        # It's useful to have a constant feature, which acts sort of like a prior
-        add('bias')
-        add('i suffix', word[-3:])
-        add('i pref1', word[0])
-        add('i-1 tag', prev)
-        add('i-2 tag', prev2)
-        add('i tag+i-2 tag', prev, prev2)
-        add('i word', context[i])
-        add('i-1 tag+i word', prev, context[i])
-        add('i-1 word', context[i-1])
-        add('i-1 suffix', context[i-1][-3:])
-        add('i-2 word', context[i-2])
-        add('i+1 word', context[i+1])
-        add('i+1 suffix', context[i+1][-3:])
-        add('i+2 word', context[i+2])
-        return features
 
 
 def _pc(n, d):
@@ -494,9 +445,10 @@ object Main extends App {
       //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
       
       val tagger = new Tagger("", classes, tag_dict)
-      //benchmark( Unit=>{ tagger.train(training_sentences) }, 10)
+      //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
       tagger.train(training_sentences)
       
+      benchmark( Unit=>{ tagger.train_one(training_sentences(0)) }, 50) // Mainly 'score'
       //tagger.train_one(training_sentences(0))
       
     }
