@@ -336,26 +336,6 @@ class PerceptronTagger(object):
         if load:
             self.load(PerceptronTagger.model_loc)
 
-    // This builds a list of tags corresponding to the predictions of the Dictionary and the Perceptron
-    def tag(self, words, tokenize=True):
-        prev, prev2 = START
-        tags = DefaultList('') 
-        context = START + [self._normalize(w) for w in words] + END
-        for i, word in enumerate(words):
-            tag = self.tagdict.get(word)
-            if not tag:
-                features = self._get_features(i, word, context, prev, prev2)
-                tag = self.model.predict(features)
-            tags.append(tag)
-            prev2 = prev; prev = tag
-        return tags
-
-    // This creates the tagdict initially from the sentences (first thing to occur)
-    // Also builds the classlist
-    def start_training(self, sentences):
-        self._make_tagdict(sentences)
-        self.model = Perceptron(self.classes)
-
     def save(self):
         # Pickle as a binary file
         pickle.dump((self.model.weights, self.tagdict, self.classes),
@@ -387,26 +367,6 @@ def train(parser, sentences, nr_iter):
     print 'Averaging weights'
     parser.model.average_weights()
 
-
-def learn_mdda(model_dir, train_loc, load_if_exists=False):
-    if not os.path.exists(model_dir):
-        os.mkdir(model_dir)
-    
-    random.seed(04)   # Has some successes, the failure on assert(gold_moves)
-
-    parser = Parser(load=load_if_exists)
-    
-    sentences = list()
-    for f in [f for f in os.listdir(train_loc) if os.path.isfile(os.path.join(train_loc, f)) and f.endswith(".dp")]:
-        sentences.extend(list(read_conll_mdda(os.path.join(train_loc, f))))
-        #break # Just 1 set of sentences to start
-        
-    #print sentences
-    train(parser, sentences, nr_iter=50)
-    parser.save()
-    
-    return 
-  
 */  
 
 
