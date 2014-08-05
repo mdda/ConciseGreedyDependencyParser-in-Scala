@@ -300,6 +300,23 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
     }}
     
   }
+  
+  def tag(sentence:Sentence):List[ClassName] = {
+    val words_norm = sentence.map( _.norm )
+    val words:List[Word] = (List("%START%","%PAD%") ::: words_norm ::: List("%ROOT%","%END%"))
+
+    val (i_final, all_tags) =
+    words_norm.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
+      val guess = tag_dict.getOrElse(word_norm, {   
+        val score = perceptron.score(get_features(words, tags, i), perceptron.average) // use the averaging version
+        perceptron.predict( score )
+      }) 
+      (i+1, tags :+ classes(guess))
+    }}
+    all_tags.drop(2)
+  }
+  
+  
 
 }
 
