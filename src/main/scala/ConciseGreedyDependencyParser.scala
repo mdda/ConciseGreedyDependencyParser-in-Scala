@@ -88,19 +88,38 @@ class Perceptron(n_classes:Int) {
   def current(w : WeightLearner):Float =  w.current
   
   def score(features: Map[Feature, Score], score_method: WeightLearner => Float): ClassVector = { // Return 'dot-product' score for all classes
-    features
-      .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
-      .foldLeft( Vector.fill(n_classes)(0:Float) ){ case (acc, (Feature(name,data), score)) => {  // Start with a zero classnum->score vector
-        learning
-          .getOrElse(name, Map[String,ClassToWeightLearner]())   // This is first level of feature access
-            .getOrElse(data, Map[ ClassNum,  WeightLearner ]())       // This is second level of feature access and is a Map of ClassNums to Weights (or NOOP if not there)
-              .foldLeft( acc ){ (acc_for_feature, cn_wl) => { // Add each of the class->weights onto our score vector
-                val classnum:ClassNum = cn_wl._1
-                val weight_learner:WeightLearner = cn_wl._2
-                acc_for_feature.updated(classnum, acc_for_feature(classnum) + score * score_method(weight_learner))
-                //acc_for_feature(classnum) += score * score_method(weight_learner)
-              }}
-      }}
+    if(true) { // This is the functional version : 3023ms for 1 train_all
+      features
+        .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
+        .foldLeft( Vector.fill(n_classes)(0:Float) ){ case (acc, (Feature(name,data), score)) => {  // Start with a zero classnum->score vector
+          learning
+            .getOrElse(name, Map[String,ClassToWeightLearner]())   // This is first level of feature access
+              .getOrElse(data, Map[ ClassNum,  WeightLearner ]())       // This is second level of feature access and is a Map of ClassNums to Weights (or NOOP if not there)
+                .foldLeft( acc ){ (acc_for_feature, cn_wl) => { // Add each of the class->weights onto our score vector
+                  val classnum:ClassNum = cn_wl._1
+                  val weight_learner:WeightLearner = cn_wl._2
+                  acc_for_feature.updated(classnum, acc_for_feature(classnum) + score * score_method(weight_learner))
+                  //acc_for_feature(classnum) += score * score_method(weight_learner)
+                }}
+        }}
+    }
+    else { //  This is the mutable version : 2493ms for 1 train_all
+      val scores = (new Array[Score](n_classes)) // All 0?
+      
+      features
+        .filter( pair => pair._2 != 0 )  // if the 'score' multiplier is zero, skip
+        .map{ case (Feature(name,data), score) => {  // Ok, so given a particular feature, and score to weight it by
+          if(learning.contains(name) && learning(name).contains(data)) {
+            for {
+              (classnum, weight_learner) <- learning(name)(data)
+            } {
+              //println(s"classnum = ${classnum} n_classes=${n_classes}")
+              scores(classnum) += score * score_method(weight_learner)
+            }
+          }
+        }}
+      scores.toVector
+    }  
   }
   
   def update(truth:ClassNum, guess:ClassNum, features:Iterable[Feature]): Unit = { // Hmmm ..Unit..
@@ -112,7 +131,7 @@ class Perceptron(n_classes:Int) {
         learning.getOrElseUpdate(feature.name, mutable.Map[FeatureData, ClassToWeightLearner]() )
         var this_map = learning(feature.name).getOrElseUpdate(feature.data, mutable.Map[ClassNum, WeightLearner]() )
                 
-        println(s"  update [${feature.name},${feature.data}] : ${learning(feature.name)(feature.data)}")
+        //println(s"  update [${feature.name},${feature.data}] : ${learning(feature.name)(feature.data)}")
         if(this_map.contains(guess)) {
           this_map.update(guess, this_map(guess).add_change(-1))
         }
@@ -272,7 +291,7 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
         val guessed = perceptron.predict( score )
         
         // Update the perceptron
-        println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
+        //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
         perceptron.update( truth(i), guessed, features.keys)
         
         guessed // Use the guessed value for next prediction/learning step (rather than the truth...)
@@ -475,13 +494,10 @@ object Main extends App {
       //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
       
       val tagger = new Tagger("", classes, tag_dict)
-      //tagger.train(training_sentences)
+      //benchmark( Unit=>{ tagger.train(training_sentences) }, 10)
+      tagger.train(training_sentences)
       
-      tagger.train_one(training_sentences(0))
-      tagger.train_one(training_sentences(0))
-      tagger.train_one(training_sentences(0))
-      tagger.train_one(training_sentences(0))
-      tagger.train_one(training_sentences(0))
+      //tagger.train_one(training_sentences(0))
       
     }
     else {
