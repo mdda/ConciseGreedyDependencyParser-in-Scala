@@ -108,9 +108,17 @@ class Perceptron(n_classes:Int) {
       for {
         feature <- features
       } {
-        val cn_wl = learning.getOrElse(feature.name, Map[String,ClassToWeightLearner]()).getOrElse(feature.data, mutable.Map[ClassNum,  WeightLearner]())
-        cn_wl.update(guess, cn_wl.getOrElse(guess, WeightLearnerInitial).update(-1))  // This REALLY OUGHT to exist, since it is what I chose (incorrectly)...
-        cn_wl.update(truth, cn_wl.getOrElse(truth, WeightLearnerInitial).update(+1))  // This could easily be a new entry
+        learning.getOrElseUpdate(feature.name, mutable.Map[FeatureName, ClassToWeightLearner]().withDefaultValue( mutable.Map[ClassNum,WeightLearner]().withDefaultValue( WeightLearnerInitial ) ))
+                .getOrElseUpdate(feature.data, mutable.Map[ClassNum,           WeightLearner]().withDefaultValue( WeightLearnerInitial ))
+                      
+        //full_map.getOrElseUpdate(word_data.norm, mutable.Map[ClassName, Int]().withDefaultValue(0))(word_data.pos) += 1
+        
+        //cn_wl.update(guess, cn_wl.getOrElse(guess, WeightLearnerInitial).update(-1))  // This REALLY OUGHT to exist, since it is what I chose (incorrectly)...
+        //cn_wl.update(truth, cn_wl.getOrElse(truth, WeightLearnerInitial).update(+1))  // This could easily be a new entry
+        
+        println(s"  update [${feature.name},${feature.data}] : ${learning(feature.name)(feature.data)}")
+        learning(feature.name)(feature.data).getOrElseUpdate(guess, WeightLearnerInitial).update(-1)
+        learning(feature.name)(feature.data).getOrElseUpdate(truth, WeightLearnerInitial).update(+1)  // This could easily be a new entry
       }
     }
   }
@@ -177,8 +185,8 @@ object Tagger {  // Here, tag == Part-of-Speech
     // mutable external collection approach takes 60ms on full training data !
     val class_set = mutable.Set[ClassName]()
     val full_map  = mutable.Map[ Word, mutable.Map[ClassName, Int] ]()
-                    //.withDefault( k => mutable.Map[ClassName, Int]().withDefaultValue(0) )
-                    //.withDefaultValue( new mutable.Map[ClassName, Int]().withDefaultValue(0) )
+                    //.withDefault( k => mutable.Map[ClassName, Int]().withDefaultValue(0) )       // FAIL - reuse
+                    //.withDefaultValue( new mutable.Map[ClassName, Int]().withDefaultValue(0) )   // FAIL - types
                     
     for {
       sentence <- training_sentences
@@ -214,41 +222,24 @@ object Tagger {  // Here, tag == Part-of-Speech
 }
 
 class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
-  val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // Would throw exception if not found
+  val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
   //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
   
   val perceptron = new Perceptron(classes.length)
-
-/*  
-  class TaggerSentence(sentence:Sentence) {
-    var pos = mutable.Array[ClassName]()
-    
-    def apply(idx: Int): WordData = {
-      if(idx>=0 || idx<sentence.length) {
-        sentence(idx) 
-      } 
-      else idx match {
-        case -2 => WordData("%START%", "%START%")
-        case -1 => WordData("%PAD%", "%PAD%")
-        case _ => if(idx>sentence.length) WordData("%END%", "%END%") else WordData("%ROOT%", "%ROOT%")
-      }
-    }
-  }
-*/
 
   def get_features(word:List[Word], pos:List[ClassName], i:Int):Map[Feature,Score] = {
     val feature_set = mutable.Set[Feature]() 
     feature_set += Feature("bias",       "")  // It's useful to have a constant feature, which acts sort of like a prior
     
     feature_set += Feature("word",       word(i))  
-    feature_set += Feature("i suffix",   word(i).takeRight(3))  
-    feature_set += Feature("i pref1",    word(i).take(1))  
+    feature_set += Feature("w suffix",   word(i).takeRight(3))  
+    feature_set += Feature("w pref1",    word(i).take(1))  
     
-    feature_set += Feature("i-1 tag",    pos(i-1))  
-    feature_set += Feature("i-2 tag",    pos(i-2))  
-    feature_set += Feature("prev2 tags", s"${pos(i-1)} ${pos(i-2)}")  
+    feature_set += Feature("tag-1",      pos(i-1))  
+    feature_set += Feature("tag-2",      pos(i-2))  
+    feature_set += Feature("tag-1-2",    s"${pos(i-1)} ${pos(i-2)}")  
     
-    feature_set += Feature("w+tag",      s"${word(i)} ${pos(i-1)}")  
+    feature_set += Feature("w,tag-1",    s"${word(i)} ${pos(i-1)}")  
     
     feature_set += Feature("w-1",        word(i-1))  
     feature_set += Feature("w-1 suffix", word(i-1).takeRight(3))  
@@ -269,34 +260,25 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
   def train_one(sentence:Sentence):Unit = {
     //val context:List[Word] = ("%START%" :: "%PAD%" :: (sentence.map( _.norm ) :+ "%ROOT%" :+ "%END%"))
     //val context:List[Word] = (List[Word]("%START%","%PAD%") ::: sentence.map( _.norm ) ::: List[Word]("%ROOT%","%END%"))
-    val words:List[Word] = (List("%START%","%PAD%") ::: sentence.map( _.norm ) ::: List("%ROOT%","%END%"))
+    
+    val words_norm = sentence.map( _.norm )
+    val words:List[Word] = (List("%START%","%PAD%") ::: words_norm ::: List("%ROOT%","%END%"))
     val truth:List[ClassNum] = (List(-1,-1) ::: sentence.map( wd => getClassNum(wd.pos) ) ::: List(-1,-1))
-        
-    words.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
+
+    words_norm.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
       val guess = tag_dict.getOrElse(word_norm, {   // Don't do the feature scoring if we already 'know' the right PoS
         val features = get_features(words, tags, i)
         val score = perceptron.score(features, perceptron.current)
         val guessed = perceptron.predict( score )
         
         // Update the perceptron
+        println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
         perceptron.update( truth(i), guessed, features.keys)
         
         guessed // Use the guessed value for next prediction/learning step (rather than the truth...)
       }) 
       (i+1, tags :+ classes(guess))
     }}
-
-/*    
-    for {
-      i <- 0 until sentence.length
-      if(! tag_dict.contains(sentence(i).norm)) // Don't do anything if we already 'know' the right PoS
-    } {
-      val features = get_features(tsentence, i)
-      val score = perceptron.score(features, perceptron.current)
-      val guessed = perceptron.predict( score )
-      perceptron.update( getClassNum(sentence(i).pos), guessed, features.keys)
-    }
-*/
     
   }
 
@@ -493,8 +475,10 @@ object Main extends App {
       //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
       
       val tagger = new Tagger("", classes, tag_dict)
-      tagger.train(training_sentences)
+      //tagger.train(training_sentences)
       
+      tagger.train_one(training_sentences(0))
+      tagger.train_one(training_sentences(0))
       
     }
     else {
