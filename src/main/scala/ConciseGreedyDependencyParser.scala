@@ -7,12 +7,14 @@ package ConciseGreedyDependencyParser
 
 import scala.collection.mutable
 
+/*
 // https://github.com/scala/pickling
 import scala.pickling._
 import json._
 //import binary._
+*/
 
-import java.io.{PrintWriter, File}
+import java.io.{PrintWriter, FileOutputStream, File}
 
 package object ConciseGreedyDependencyParserObj {
   type ClassNum  = Int
@@ -131,7 +133,18 @@ class Perceptron(n_classes:Int) {
     }
   }
   
- 
+  override def toString():String = {
+    s"perceptron.seen[$seen]\n" + 
+    learning.map({ case (feature_name, m1) => {
+      m1.map({ case (feature_data, cn_feature) => {
+        cn_feature.map({ case (cn, feature) => {
+          s"$cn:${feature.current},${feature.total},${feature.ts}"
+        }}).mkString(s"${feature_data}[","|","]\n")
+      }}).mkString(s"*${feature_name}*\n","","\n")
+    }}).mkString("perceptron.learning[\n","","]\n")
+  }
+  
+/* 
   // http://stackoverflow.com/questions/23182577/even-trivial-serialization-examples-in-scala-dont-work-why
   // http://stackoverflow.com/questions/23072118/scala-pickling-how
   def save(path: String):Unit = {
@@ -162,6 +175,7 @@ class Perceptron(n_classes:Int) {
     learning.clear
     learning ++= unpickled
   }
+*/
 
 }
 
@@ -232,7 +246,7 @@ object Tagger {  // Here, tag == Part-of-Speech
   
 }
 
-class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
+class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
   val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
   //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
   
@@ -308,7 +322,11 @@ class Tagger(path:String, classes:Vector[ClassName], tag_dict:Map[Word, ClassNum
     all_tags.drop(2)
   }
   
-  
+  override def toString():String = {
+    classes.mkString("classes[","|","]\n") + 
+    tag_dict.map({ case (norm, classnum) => s"$norm:$classnum" }).mkString("tag_dict[","|","]\n") +
+    perceptron.toString
+  }
 
 }
 
@@ -413,7 +431,7 @@ object Main extends App {
       val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences)
       //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
       
-      val tagger = new Tagger("", classes, tag_dict)
+      val tagger = new Tagger(classes, tag_dict)
       //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
       tagger.train(training_sentences)
       
@@ -422,6 +440,13 @@ object Main extends App {
       println(s"original = ${s}")
       println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
       
+      if(false) {
+        //println(s"Save : \n${tagger.toString}")
+        //val fos = new FileOutputStream("tagger-toString.txt")
+        val fos = new PrintWriter("tagger-toString.txt")
+        fos.write(tagger.toString)
+        fos.close
+      }
     }
     else {
       printf("Usage :\nrun {learn}\n")
