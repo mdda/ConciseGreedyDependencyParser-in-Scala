@@ -245,8 +245,24 @@ object Tagger {  // Here, tag == Part-of-Speech
   }
  
   def load(lines:Iterator[String]):Tagger = {
-    val (classes, tag_dict)=(Vector[ClassName](), Map[Word, ClassNum]())
-    val t = new Tagger(classes, tag_dict)
+    var (classes, tag_dict)=(Array[ClassName](), mutable.Map[Word, ClassNum]())
+    
+    val tagger_classes = """tagger.classes=\[(.*)\]""".r
+    val tagger_tag_dict = """tagger.tag_dict=\[(.*)\]""".r
+    def parse(lines: Iterator[String]):Unit = lines.next match {
+      case tagger_classes(data) => {
+        classes = data.split('|')
+        parse(lines)
+      }
+      case tagger_tag_dict(data) => {
+        tag_dict ++= data.split('|').map( nc => { val arr = nc.split('='); (arr(0),arr(1).toInt) })  // println(s"Tagger pair : $nc"); 
+        parse(lines)
+      }
+      case _ => () // line not understood : Finish
+    }
+    parse(lines)
+    
+    val t = new Tagger(classes.toVector, tag_dict.toMap)
     //t.perceptron.load()
     t
   }
@@ -254,6 +270,7 @@ object Tagger {  // Here, tag == Part-of-Speech
 }
 
 class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
+  println(s"Tagger.Classes = [${classes.mkString(",")}]")
   val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
   //def getClassNum(class_name: ClassName): ClassNum = classes.indexOf(class_name) // -1 => "CLASS-NOT-FOUND"
   
@@ -331,7 +348,7 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
   
   override def toString():String = {
     classes.mkString("tagger.classes=[","|","]\n") + 
-    tag_dict.map({ case (norm, classnum) => s"$norm:$classnum" }).mkString("tagger.tag_dict=[","|","]\n") +
+    tag_dict.map({ case (norm, classnum) => s"$norm=$classnum" }).mkString("tagger.tag_dict=[","|","]\n") +
     "\n" +
     perceptron.toString
   }
