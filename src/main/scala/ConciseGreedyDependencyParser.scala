@@ -7,7 +7,7 @@ package ConciseGreedyDependencyParser
 
 import scala.collection.mutable
 
-/*
+/*  SOMEONE needs to make 'scala-pickling' (a) better documented, and (b) use fewer implicits, so compile time doesn't x4...
 // https://github.com/scala/pickling
 import scala.pickling._
 import json._
@@ -144,15 +144,51 @@ class Perceptron(n_classes:Int) {
     }}).mkString("perceptron.learning={\n","","}\n")
   }
   
+  def load(lines:Iterator[String]):Unit = {
+    val perceptron_seen     = """perceptron.seen=\[(.*)\]""".r
+    val perceptron_feat_n   = """(.*)\{""".r
+    val perceptron_feat_d   = """(.*)\[(.*)\]""".r
+    def parse(lines: Iterator[String]):Unit = if(lines.hasNext) lines.next match {
+      case perceptron_seen(data) => {
+        seen = data.toInt
+        parse(lines)
+      }
+      case "perceptron.learning={" => {
+        parse_featurename(lines)
+        parse(lines)
+      }
+      case _ => () // line not understood : Finished with perceptron
+    }
+    def parse_featurename(lines: Iterator[String]):Unit = if(lines.hasNext) lines.next match {
+      case perceptron_feat_n(feature_name) => {
+        //println(s"Reading FeatureName[$feature_name]")
+        learning.getOrElseUpdate(feature_name, mutable.Map[FeatureData, ClassToWeightLearner]() )
+        parse_featuredata(feature_name, lines)
+        parse_featurename(lines) // Go back for more featurename sections
+      }
+      case _ => () // line not understood : Finished with featurename
+    }
+    def parse_featuredata(feature_name:String, lines: Iterator[String]):Unit = if(lines.hasNext) lines.next match {
+      case perceptron_feat_d(feature_data, classnum_weight) => {
+        //println(s"Reading FeatureData[$feature_data]")
+        learning(feature_name).getOrElseUpdate(feature_data, mutable.Map[ClassNum, WeightLearner]() )
+        classnum_weight.split('|').map( cw => { 
+          val cn_wt = cw.split(':').map(_.split(',').map(_.toInt))
+          // println(s"Tagger node : $cn_wt"); 
+          learning(feature_name)(feature_data) += (( cn_wt(0)(0), WeightLearner(cn_wt(1)(0), cn_wt(1)(1), cn_wt(1)(2)) ))
+        }) 
+        parse_featuredata(feature_name, lines)  // Go back for more featuredata lines
+      }
+      case _ => () // line not understood : Finished with featuredata
+    }
+    parse(lines)
+  }
+  
 /* 
   // http://stackoverflow.com/questions/23182577/even-trivial-serialization-examples-in-scala-dont-work-why
   // http://stackoverflow.com/questions/23072118/scala-pickling-how
   def save(path: String):Unit = {
     print(s"Saving model to ${path}")
-    
-    //val fos = new FileOutputStream(path)
-    //val pickled = learning.pickle
-    //fos.write(learning.pickle)
     
     val pw = new PrintWriter(new File(path))
     // Uncommenting this line increases compile time from 2s to 10s...
@@ -162,10 +198,6 @@ class Perceptron(n_classes:Int) {
 
   def load(path: String):Unit = {
     print(s"Loading Perceptron model to ${path}")
-    
-    //val pickled = learning.pickle
-    //val unpickled = pickled.unpickle[Wrapper]
-    //learning =  // Hmm : this is a val of a mutable.Map, may need to copy data in explicitly
     
     val buffered_source = scala.io.Source.fromFile(path)
     val unpickled = buffered_source.toString.unpickle[learning.type]
@@ -263,7 +295,7 @@ object Tagger {  // Here, tag == Part-of-Speech
     parse(lines)
     
     val t = new Tagger(classes.toVector, tag_dict.toMap)
-    //t.perceptron.load()
+    t.perceptron.load(lines)
     t
   }
 
@@ -358,34 +390,8 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 
 
 /* 
-class PerceptronTagger(object):
-    '''Greedy Averaged Perceptron tagger'''
-    model_loc = os.path.join(os.path.dirname(__file__), 'models/tagger.pickle')
-    def __init__(self, classes=None, load=True):
-        self.tagdict = {}
-        if classes:
-            self.classes = classes
-        else:
-            self.classes = set()
-        self.model = Perceptron(self.classes)
-        if load:
-            self.load(PerceptronTagger.model_loc)
 
-    def save(self):
-        # Pickle as a binary file
-        pickle.dump((self.model.weights, self.tagdict, self.classes),
-                    open(PerceptronTagger.model_loc, 'wb'), -1)
-
-    def load(self, loc):
-        w_td_c = pickle.load(open(loc, 'rb'))
-        self.model.weights, self.tagdict, self.classes = w_td_c
-        self.model.classes = self.classes
-
-
-def _pc(n, d):
-    return (float(n) / d) * 100
-
-def train(parser, sentences, nr_iter):
+def train_both(parser, sentences, nr_iter):
     parser.tagger.start_training(sentences)
     for itn in range(nr_iter):
         corr = 0; total = 0
