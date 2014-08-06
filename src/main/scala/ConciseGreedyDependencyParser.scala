@@ -415,7 +415,7 @@ class DependencyMaker(tagger:Tagger) {
 }
 
 /*
-    // This annotates the list of words so that parse.heads is it's best guess
+    // This annotates the list of words so that parse.heads is its best guess
     def parse(self, words):
         n = len(words)
         
@@ -555,7 +555,7 @@ def extract_features(words, tags, n0, n, stack, parse):
             return 0, '', ''
         deps = deps[word]
         valency = len(deps)
-        if not valency:
+        if not valency: // i.e. valency==0
             return 0, '', ''
         elif valency == 1:
             return 1, data[deps[-1]], ''
