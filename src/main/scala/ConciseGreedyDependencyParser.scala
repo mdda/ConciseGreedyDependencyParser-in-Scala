@@ -134,14 +134,14 @@ class Perceptron(n_classes:Int) {
   }
   
   override def toString():String = {
-    s"perceptron.seen[$seen]\n" + 
+    s"perceptron.seen=[$seen]\n" + 
     learning.map({ case (feature_name, m1) => {
       m1.map({ case (feature_data, cn_feature) => {
         cn_feature.map({ case (cn, feature) => {
           s"$cn:${feature.current},${feature.total},${feature.ts}"
         }}).mkString(s"${feature_data}[","|","]\n")
-      }}).mkString(s"*${feature_name}*\n","","\n")
-    }}).mkString("perceptron.learning[\n","","]\n")
+      }}).mkString(s"${feature_name}{\n","","}\n")
+    }}).mkString("perceptron.learning={\n","","}\n")
   }
   
 /* 
@@ -243,7 +243,14 @@ object Tagger {  // Here, tag == Part-of-Speech
     }
     (classes, tag_dict.toMap)
   }
-  
+ 
+  def load(lines:Iterator[String]):Tagger = {
+    val (classes, tag_dict)=(Vector[ClassName](), Map[Word, ClassNum]())
+    val t = new Tagger(classes, tag_dict)
+    //t.perceptron.load()
+    t
+  }
+
 }
 
 class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
@@ -323,8 +330,9 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
   }
   
   override def toString():String = {
-    classes.mkString("classes[","|","]\n") + 
-    tag_dict.map({ case (norm, classnum) => s"$norm:$classnum" }).mkString("tag_dict[","|","]\n") +
+    classes.mkString("tagger.classes=[","|","]\n") + 
+    tag_dict.map({ case (norm, classnum) => s"$norm:$classnum" }).mkString("tagger.tag_dict=[","|","]\n") +
+    "\n" +
     perceptron.toString
   }
 
@@ -380,7 +388,7 @@ def train(parser, sentences, nr_iter):
 */  
 
 
-class Learn {
+class CGDP {
   def read_CONLL(path:String): List[Sentence] = {
     println(s"read_CONLL(${path})")
     val source = scala.io.Source.fromFile(path).mkString
@@ -419,14 +427,14 @@ object Main extends App {
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
     if(args.contains("learn")) {
-      val l = new Learn
+      val parser = new CGDP
       
-      //val sentences = l.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
+      //val sentences = parser.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
       val training_sentences = (for (
          (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
          if( file.getName.endsWith(".dp") )
          //if(i<5)
-      ) yield l.read_CONLL(file.getPath) ).flatMap( a => a ) 
+      ) yield parser.read_CONLL(file.getPath) ).flatMap( a => a ) 
   
       val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences)
       //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
@@ -440,13 +448,17 @@ object Main extends App {
       println(s"original = ${s}")
       println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
       
-      if(false) {
-        //println(s"Save : \n${tagger.toString}")
+      if(true) {
         //val fos = new FileOutputStream("tagger-toString.txt")
         val fos = new PrintWriter("tagger-toString.txt")
         fos.write(tagger.toString)
         fos.close
       }
+    }
+    else if(args.contains("load")) {
+      val file_lines = scala.io.Source.fromFile("tagger-toString.txt").getLines
+      val tagger = Tagger.load(file_lines)
+      
     }
     else {
       printf("Usage :\nrun {learn}\n")
