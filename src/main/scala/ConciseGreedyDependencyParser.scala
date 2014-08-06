@@ -433,7 +433,21 @@ class CGDP {
     sentences
   }
   
-  
+  def sentence(s0: String): Sentence = {
+    // Protect unusual cases of '.'
+    val s1 = s0.replaceAllLiterally("...", " #ELIPSIS# ")
+               .replaceAll( """(\d)\.""", """$1#POINT#""")
+               .replaceAll( """(\d+)(#POINT#?)(\d*)\.""", """ $1$2$3 """) // Spaces either side of a (decimal) number
+    
+    // Space out remaining unusual characters
+    val space_out = List(",", ".", ":", ";", "$", "\"", "''", "``", "'t", "'m", "'ve", "'d")
+    val s2 = space_out.foldLeft(s1){ (str, spaceme) => str.replaceAllLiterally(spaceme, " "+spaceme+" ") }
+    
+    val s3 = s2.replaceAllLiterally( """#POINT#""", """.""").replaceAllLiterally("#ELIPSIS#", "...") // Undo dot protection 
+    
+    // case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1))
+    s3.split("""\s+""").map( word => WordData(word) ).toList
+  }
 }
 
 
@@ -450,14 +464,14 @@ object Main extends App {
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
     if(args.contains("learn")) {
-      val parser = new CGDP
+      val utils = new CGDP
       
-      //val sentences = parser.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
+      //val sentences = utils.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
       val training_sentences = (for (
          (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
          if( file.getName.endsWith(".dp") )
          //if(i<5)
-      ) yield parser.read_CONLL(file.getPath) ).flatMap( a => a ) 
+      ) yield utils.read_CONLL(file.getPath) ).flatMap( a => a ) 
   
       val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences)
       //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
@@ -468,6 +482,7 @@ object Main extends App {
       
       val s = training_sentences(0)
       //benchmark( Unit=>{ tagger.train_one(s) }, 50) // Mainly 'score'
+      println(s"""Text = ${s.map(_.raw).mkString(" ")}""")
       println(s"original = ${s}")
       println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
       
@@ -479,9 +494,14 @@ object Main extends App {
       }
     }
     else if(args.contains("load")) {
+      val utils = new CGDP
+      
       val file_lines = scala.io.Source.fromFile("tagger-toString.txt").getLines
       val tagger = Tagger.load(file_lines)
       
+      val txt="Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29 ."
+      val s = utils.sentence(txt)
+      println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
     }
     else {
       printf("Usage :\nrun {learn}\n")
