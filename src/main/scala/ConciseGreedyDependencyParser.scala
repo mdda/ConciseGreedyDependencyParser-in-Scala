@@ -42,10 +42,6 @@ import ConciseGreedyDependencyParserObj._
 
 case class Feature(name:FeatureName, data:FeatureData)
 
-case class DefaultList(list:List[Int], default:Int=0) {
-  def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else default
-}
-
 class Perceptron(n_classes:Int) {
   // These need not be visible outside the class
   type TimeStamp = Int
@@ -337,41 +333,28 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
   }
 
   def train(sentences:List[Sentence]):Unit = sentences.foreach( train_one )
+  def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
     
-  def train_one(sentence:Sentence):Unit = {
+  def tag(sentence:Sentence):List[ClassName] = process(sentence, false)
+    
+  def process(sentence:Sentence, train:Boolean):List[ClassName] = {
     //val context:List[Word] = ("%START%" :: "%PAD%" :: (sentence.map( _.norm ) :+ "%ROOT%" :+ "%END%"))
-    //val context:List[Word] = (List[Word]("%START%","%PAD%") ::: sentence.map( _.norm ) ::: List[Word]("%ROOT%","%END%"))
-    
     val words_norm = sentence.map( _.norm )
     val words:List[Word] = (List("%START%","%PAD%") ::: words_norm ::: List("%ROOT%","%END%"))
-    val truth:List[ClassNum] = (List(-1,-1) ::: sentence.map( wd => getClassNum(wd.pos) ) ::: List(-1,-1))
+    val truth:List[ClassNum] = if(train) (List(-1,-1) ::: sentence.map( wd => getClassNum(wd.pos) ) ::: List(-1,-1)) else Nil
 
+    val (i_final, all_tags) =
     words_norm.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
       val guess = tag_dict.getOrElse(word_norm, {   // Don't do the feature scoring if we already 'know' the right PoS
         val features = get_features(words, tags, i)
         val score = perceptron.score(features, perceptron.current)
         val guessed = perceptron.predict( score )
         
-        // Update the perceptron
-        //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
-        perceptron.update( truth(i), guessed, features.keys)
-        
+        if(train) {// Update the perceptron
+          //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
+          perceptron.update( truth(i), guessed, features.keys)
+        }
         guessed // Use the guessed value for next prediction/learning step (rather than the truth...)
-      }) 
-      (i+1, tags :+ classes(guess))
-    }}
-    
-  }
-  
-  def tag(sentence:Sentence):List[ClassName] = {
-    val words_norm = sentence.map( _.norm )
-    val words:List[Word] = (List("%START%","%PAD%") ::: words_norm ::: List("%ROOT%","%END%"))
-
-    val (i_final, all_tags) =
-    words_norm.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
-      val guess = tag_dict.getOrElse(word_norm, {   
-        val score = perceptron.score(get_features(words, tags, i), perceptron.average) // use the averaging version
-        perceptron.predict( score )
       }) 
       (i+1, tags :+ classes(guess))
     }}
@@ -388,7 +371,6 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 }
 
 
-//class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 class DependencyMaker(tagger:Tagger) {
   val classes = Vector[ClassName]("SHIFT", "RIGHT", "LEFT")
   println(s"DependencyMaker.Classes = [classes]")
@@ -397,15 +379,47 @@ class DependencyMaker(tagger:Tagger) {
   val perceptron = new Perceptron(classes.length)
   //confusionmatrix == UNUSED  
   
+  case class DefaultList(list:List[Int], default:Int=0) {
+    def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else default
+  }
+
+/*
+  case class Parse(heads:, lefts:, rights:)  //n:Int,  
+  // Stack :: this is very intertwined with Parse...
   
+  class Parse(object):
+      def __init__(self, n):
+          self.n = n
+          
+          // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
+          self.heads = [None] * (n-1)
+          
+          // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
+          // DefaultList is of Ints here
+          self.lefts = []
+          self.rights = []
+          for i in range(n+1):
+              self.lefts.append(DefaultList(0))
+              self.rights.append(DefaultList(0))
+
+      // This makes the word at 'child' point to head
+      // and adds the child to the appropriate left/right list of head
+      def add(self, head, child):
+          self.heads[child] = head
+          if child < head:
+              self.lefts[head].append(child)
+          else:
+              self.rights[head].append(child)
+*/
   
 }
 
 /*
+    // This annotates the list of words so that parse.heads is it's best guess
     def parse(self, words):
         n = len(words)
         
-        i = 2
+        i = 2  // Starting place in list (i.e. first word)
         stack = [1]
         parse = Parse(n)
         
@@ -415,7 +429,7 @@ class DependencyMaker(tagger:Tagger) {
             scores = self.model.score(features)
             
             valid_moves = get_valid_moves(i, n, len(stack))
-            guess = max(valid_moves, key=lambda move: scores[move])
+            guess = max(valid_moves, key=lambda move: scores[move]) // This is the best scored move, of those that are valid
             
             i = transition(guess, i, stack, parse)
             
@@ -455,33 +469,10 @@ class DependencyMaker(tagger:Tagger) {
             
         // This is # of words with correct head
         return len([i for i in range(n-1) if parse.heads[i] == gold_heads[i]]) 
-
-class Parse(object):
-    def __init__(self, n):
-        self.n = n
-        
-        // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
-        self.heads = [None] * (n-1)
-        
-        // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
-        // DefaultList is of Ints here
-        self.lefts = []
-        self.rights = []
-        for i in range(n+1):
-            self.lefts.append(DefaultList(0))
-            self.rights.append(DefaultList(0))
-
-    // This makes the word at 'child' point to head
-    // and adds the child to the appropriate left/right list of head
-    def add(self, head, child, label=None):
-        self.heads[child] = head
-        if child < head:
-            self.lefts[head].append(child)
-        else:
-            self.rights[head].append(child)
-
-
-
+*/
+/*
+// i either increases (SHIFT) and lengthens the stack, 
+//       or stays the same    and shortens the stack, and manipulates left&right 
 def transition(move, i, stack, parse):
     if move == SHIFT:
         stack.append(i)
@@ -520,21 +511,26 @@ def get_gold_moves(n0, n, stack, heads, gold):
         return [LEFT]
     costly = set([m for m in MOVES if m not in valid])
     #print "Costly = ", costly
+    
     # If the word behind s0 is its gold head, Left is incorrect
     if len(stack) >= 2 and gold[stack[-1]] == stack[-2]:
         costly.add(LEFT)
+        
     # If there are any dependencies between n0 and the stack,
     # pushing n0 will lose them.
     if SHIFT not in costly and deps_between(n0, stack, gold):
         costly.add(SHIFT)
+        
     # If there are any dependencies between s0 and the buffer, popping
     # s0 will lose them.
     if deps_between(stack[-1], range(n0+1, n-1), gold):
         costly.add(LEFT)
         costly.add(RIGHT)
+        
     return [m for m in MOVES if m not in costly]
+*/
 
-
+/*
 def extract_features(words, tags, n0, n, stack, parse):
     def get_stack_context(depth, stack, data):
         if depth >= 3:
