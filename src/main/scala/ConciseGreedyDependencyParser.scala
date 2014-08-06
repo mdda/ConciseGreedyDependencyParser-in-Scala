@@ -42,8 +42,8 @@ import ConciseGreedyDependencyParserObj._
 
 case class Feature(name:FeatureName, data:FeatureData)
 
-case class DefaultList(list:List[String], default:String="") {
-  def apply(idx: Int): String = if(idx>=0 || idx<list.length) list(idx) else default
+case class DefaultList(list:List[Int], default:Int=0) {
+  def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else default
 }
 
 class Perceptron(n_classes:Int) {
@@ -389,65 +389,49 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 
 
 //class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
-class DependencyMaker() {
-  println(s"DependencyMaker.Classes = []")
-  //val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
+class DependencyMaker(tagger:Tagger) {
+  val classes = Vector[ClassName]("SHIFT", "RIGHT", "LEFT")
+  println(s"DependencyMaker.Classes = [classes]")
+  val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
   
-  val perceptron = new Perceptron(3)
+  val perceptron = new Perceptron(classes.length)
+  //confusionmatrix == UNUSED  
+  
+  
+  
 }
 
 /*
-
-class Parse(object):
-    def __init__(self, n):
-        self.n = n
-        self.heads = [None] * (n-1)
-        #self.labels = [None] * (n-1)
-        self.lefts = []
-        self.rights = []
-        for i in range(n+1):
-            self.lefts.append(DefaultList(0))
-            self.rights.append(DefaultList(0))
-
-    def add(self, head, child, label=None):
-        self.heads[child] = head
-        #self.labels[child] = label
-        if child < head:
-            self.lefts[head].append(child)
-        else:
-            self.rights[head].append(child)
-
-
-class Parser(object):
-    def __init__(self, load=True):
-        model_dir = os.path.join(os.path.dirname(__file__), 'models/')
-        self.model = Perceptron(MOVES)
-        if load:
-            self.model.load(path.join(model_dir, 'parser.pickle'))
-        self.tagger = PerceptronTagger(load=load)
-        self.confusion_matrix = defaultdict(lambda: defaultdict(int))
-
-    def save(self):
-        self.model.save(path.join(os.path.dirname(__file__), 'models/parser.pickle'))
-        self.tagger.save()
-    
     def parse(self, words):
         n = len(words)
-        i = 2; stack = [1]; parse = Parse(n)
+        
+        i = 2
+        stack = [1]
+        parse = Parse(n)
+        
         tags = self.tagger.tag(words)
         while stack or (i+1) < n:
             features = extract_features(words, tags, i, n, stack, parse)
             scores = self.model.score(features)
+            
             valid_moves = get_valid_moves(i, n, len(stack))
             guess = max(valid_moves, key=lambda move: scores[move])
+            
             i = transition(guess, i, stack, parse)
+            
+        // This is list of produced tags and 'heads'
         return tags, parse.heads
 
     def train_one(self, itn, words, gold_tags, gold_heads):
         n = len(words)
+        
         #print "train_one(%d, n=%d, %s)" % (itn, n, words, )
         #print " gold_heads = %s" % (gold_heads, )
-        i = 2; stack = [1]; parse = Parse(n)
+        
+        i = 2
+        stack = [1]
+        parse = Parse(n)
+        
         tags = self.tagger.tag(words)
         while stack or (i + 1) < n:
             #print "  i/n=%d/%d stack=" % (i,n ), stack
@@ -457,14 +441,45 @@ class Parser(object):
             valid_moves = get_valid_moves(i, n, len(stack))
             guess = max(valid_moves, key=lambda move: scores[move])
             
+            // vvv
             gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
             assert gold_moves
             best = max(gold_moves, key=lambda move: scores[move])
             
             self.model.update(best, guess, features)
+            // ^^^
+            
             i = transition(guess, i, stack, parse)
-            self.confusion_matrix[best][guess] += 1
-        return len([i for i in range(n-1) if parse.heads[i] == gold_heads[i]])
+            
+            ???self.confusion_matrix[best][guess] += 1
+            
+        // This is # of words with correct head
+        return len([i for i in range(n-1) if parse.heads[i] == gold_heads[i]]) 
+
+class Parse(object):
+    def __init__(self, n):
+        self.n = n
+        
+        // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
+        self.heads = [None] * (n-1)
+        
+        // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
+        // DefaultList is of Ints here
+        self.lefts = []
+        self.rights = []
+        for i in range(n+1):
+            self.lefts.append(DefaultList(0))
+            self.rights.append(DefaultList(0))
+
+    // This makes the word at 'child' point to head
+    // and adds the child to the appropriate left/right list of head
+    def add(self, head, child, label=None):
+        self.heads[child] = head
+        if child < head:
+            self.lefts[head].append(child)
+        else:
+            self.rights[head].append(child)
+
 
 
 def transition(move, i, stack, parse):
