@@ -415,6 +415,16 @@ class DependencyMaker(tagger:Tagger) {
 }
 
 /*
+
+    STATE STRUCTURE (According to blog post) :
+     * An index, i, into the list of tokens;
+     * The dependencies added so far, in Parse
+     * A stack, containing word indices that occurred before i, for which we’re yet to assign a head.
+
+    -- By construction, stack is always stored in increasing order [ a,c,f,g ] i
+       So I(head)-g a left dangling branch, and F(head)-g is right dangling one
+    
+
     // This annotates the list of words so that parse.heads is its best guess
     def parse(self, words):
         n = len(words)
