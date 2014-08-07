@@ -424,6 +424,11 @@ class DependencyMaker(tagger:Tagger) {
     -- By construction, stack is always stored in increasing order [ a,c,f,g ] i
        So I(head)-g a left dangling branch, and F(head)-g is right dangling one
     
+    -- state contains {i,n,stack,parse} and 
+    -- state.valid_moves
+    -- state.transition(move) -> new state
+    -- recursive parse?  state.end_parse=(i+1>=n and stack empty)
+    
 
     // This annotates the list of words so that parse.heads is its best guess
     def parse(self, words):
@@ -495,7 +500,7 @@ def transition(move, i, stack, parse):
         return i
     assert move in MOVES
 
-
+// only depends on stack_depth (not parse)
 def get_valid_moves(i, n, stack_depth):
     moves = []
     if (i+1) < n:
