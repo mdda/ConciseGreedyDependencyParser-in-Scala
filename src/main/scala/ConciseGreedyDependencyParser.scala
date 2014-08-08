@@ -374,7 +374,7 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 
 
 class DependencyMaker(tagger:Tagger) {
-  val SHIFT, RIGHT, LEFT = (0,1,2)
+  val SHIFT:Move=0; val RIGHT:Move=1; val LEFT:Move=2; val INVALID:Move=(-1)
   val move_names = Vector[ClassName]("SHIFT", "RIGHT", "LEFT")
   println(s"DependencyMaker.Classes = [$move_names]")
   //val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
@@ -434,23 +434,25 @@ class DependencyMaker(tagger:Tagger) {
       case RIGHT => CurrentState(i, stack.tail, parse.add(stack.tail.head, stack.head))   // parse.add(stack[-2], stack.pop())
       case LEFT  => CurrentState(i, stack.tail, parse.add(i, stack.head))                 // parse.add(i, stack.pop())
     }
-/*    
-def transition(move, i, stack, parse):
-    if move == SHIFT:
-        stack.append(i)
-        return i + 1
-    elif move == RIGHT:
-        parse.add(stack[-2], stack.pop())
-        return i
-    elif move == LEFT:
-        parse.add(i, stack.pop())
-        return i
-    assert move in MOVES
-*/
-
-    //def valid_moves:Unit // :Set[Move]
-  }
     
+    def valid_moves:Set[Move] = List[Move](  // only depends on stack_depth (not parse itself)
+      if(i+1 < parse.heads.length) SHIFT else INVALID,
+      if(stack.length>=2)          RIGHT else INVALID,
+      if(stack.length>=1)          LEFT  else INVALID
+    ).filterNot( _ == INVALID).toSet
+    
+/*    
+    def get_valid_moves(i, n, stack_depth):
+        moves = []
+        if (i+1) < n:
+            moves.append(SHIFT)
+        if stack_depth >= 2:
+            moves.append(RIGHT)
+        if stack_depth >= 1:
+            moves.append(LEFT)
+        return moves
+*/    
+  }
     
 }
 
