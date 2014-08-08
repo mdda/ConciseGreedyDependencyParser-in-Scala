@@ -349,7 +349,7 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
     words_norm.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
       val guess = tag_dict.getOrElse(word_norm, {   // Don't do the feature scoring if we already 'know' the right PoS
         val features = get_features(words, tags, i)
-        val score = perceptron.score(features, perceptron.current)
+        val score = perceptron.score(features, if(train) perceptron.current else perceptron.average)
         val guessed = perceptron.predict( score )
         
         if(train) {// Update the perceptron
@@ -469,19 +469,24 @@ class DependencyMaker(tagger:Tagger) {
         state // This the answer!
       }
       else {
-        //print "  i/n=%d/%d stack=" % (i,n ), stack
-        
+        println(s"  i/n=$state.i/$state.parse.n stack=$state.stack")
         
         //val features = extract_features(words, tags, state)
-        //val scores = perceptron.score(features)
-            
-        //val guess = max(valid_moves, key=lambda move: scores[move])
-        val guess:Move = INVALID
-            
-        if(train) {
+        val features = Map[Feature, Score]()
+
+        // This will produce scores for features that aren't valid too
+        val score = perceptron.score(features, if(train) perceptron.current else perceptron.average)
+        
+        // Sort valid_moves scores into descending order, and pick the best move
+        val guess = valid_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
+        
+        if(train) {  // Update the perceptron
+          //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
+          
           //val gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
-          //val best:Move  = max(gold_moves, key=lambda move: scores[move])
-          //perceptron.update(best, guess, features)
+          val gold_moves = Set[Move]()
+          val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
+          perceptron.update(best, guess, features.keys)
         }
         
         move_through_sentence_from( state.transition(guess) ) 
