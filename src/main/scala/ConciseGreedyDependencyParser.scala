@@ -19,7 +19,9 @@ import java.io.{PrintWriter, FileOutputStream, File}
 package object ConciseGreedyDependencyParserObj {
   type ClassNum  = Int
   type ClassName = String
+  
   type DependencyIndex = Int
+  type Move      = Int
   
   type FeatureName = String
   type FeatureData = String
@@ -372,11 +374,12 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 
 
 class DependencyMaker(tagger:Tagger) {
-  val classes = Vector[ClassName]("SHIFT", "RIGHT", "LEFT")
-  println(s"DependencyMaker.Classes = [classes]")
-  val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
+  val SHIFT, RIGHT, LEFT = (0,1,2)
+  val move_names = Vector[ClassName]("SHIFT", "RIGHT", "LEFT")
+  println(s"DependencyMaker.Classes = [$move_names]")
+  //val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
   
-  val perceptron = new Perceptron(classes.length)
+  val perceptron = new Perceptron(move_names.length)
   //confusionmatrix == UNUSED  
   
   case class DefaultList(list:List[Int], default:Int=0) { 
@@ -423,8 +426,32 @@ class DependencyMaker(tagger:Tagger) {
     -- recursive parse?  state.end_parse=(i+1>=n and stack empty)
 */
   
+  case class CurrentState(i:Int, stack:List[Int], parse:CurrentParse) {
+    def transition(move:Move):CurrentState = move match {
+      // i either increases and lengthens the stack, 
+      case SHIFT => CurrentState(i+1, i::stack, parse)
+      // or stays the same, and shortens the stack, and manipulates left&right 
+      case RIGHT => CurrentState(i, stack.tail, parse.add(stack.tail.head, stack.head))   // parse.add(stack[-2], stack.pop())
+      case LEFT  => CurrentState(i, stack.tail, parse.add(i, stack.head))                 // parse.add(i, stack.pop())
+    }
+/*    
+def transition(move, i, stack, parse):
+    if move == SHIFT:
+        stack.append(i)
+        return i + 1
+    elif move == RIGHT:
+        parse.add(stack[-2], stack.pop())
+        return i
+    elif move == LEFT:
+        parse.add(i, stack.pop())
+        return i
+    assert move in MOVES
+*/
 
-
+    //def valid_moves:Unit // :Set[Move]
+  }
+    
+    
 }
 
 /*
