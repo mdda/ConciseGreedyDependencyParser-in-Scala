@@ -379,43 +379,36 @@ class DependencyMaker(tagger:Tagger) {
   val perceptron = new Perceptron(classes.length)
   //confusionmatrix == UNUSED  
   
-  case class DefaultList(list:List[Int], default:Int=0) {
-    def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else default
+  case class DefaultList(list:List[Int], default:Int=0) { 
+    def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else {
+      println(s"Hit Default in DefaultList idx = ${idx}")
+      default
+    }
+    def ::(a: Int) = DefaultList(a::list, default)
+  }
+
+  case class CurrentParse(heads:Array[Int], lefts:Array[DefaultList], rights:Array[DefaultList]) { // NB: Insert at start, not at end...
+      // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
+      def add(head:Int, child:Int) = {
+        if(child<head) {
+          CurrentParse(heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
+        } 
+        else {
+          CurrentParse(heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
+        }
+      }
+  }
+  def CurrentParseInit(n:Int) = {
+    // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
+    val heads = Array[Int](n) // maybe this should be n-1? (not important, really)
+    
+    // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
+    val lefts  = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
+    val rights = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
+    CurrentParse(heads, lefts, rights)
   }
 
 /*
-  case class Parse(heads:, lefts:, rights:)  //n:Int,  
-  // Stack :: this is very intertwined with Parse...
-  
-  class Parse(object):
-      def __init__(self, n):
-          self.n = n
-          
-          // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
-          self.heads = [None] * (n-1)
-          
-          // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
-          // DefaultList is of Ints here
-          self.lefts = []
-          self.rights = []
-          for i in range(n+1):
-              self.lefts.append(DefaultList(0))
-              self.rights.append(DefaultList(0))
-
-      // This makes the word at 'child' point to head
-      // and adds the child to the appropriate left/right list of head
-      def add(self, head, child):
-          self.heads[child] = head
-          if child < head:
-              self.lefts[head].append(child)
-          else:
-              self.rights[head].append(child)
-*/
-  
-}
-
-/*
-
     STATE STRUCTURE (According to blog post) :
      * An index, i, into the list of tokens;
      * The dependencies added so far, in Parse
@@ -428,7 +421,13 @@ class DependencyMaker(tagger:Tagger) {
     -- state.valid_moves
     -- state.transition(move) -> new state
     -- recursive parse?  state.end_parse=(i+1>=n and stack empty)
-    
+*/
+  
+
+
+}
+
+/*
 
     // This annotates the list of words so that parse.heads is its best guess
     def parse(self, words):
