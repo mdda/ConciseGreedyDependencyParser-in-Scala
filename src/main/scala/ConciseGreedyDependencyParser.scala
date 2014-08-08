@@ -419,7 +419,7 @@ class DependencyMaker(tagger:Tagger) {
      * A stack, containing word indices that occurred before i, for which we’re yet to assign a head.
 
     -- By construction, stack is always stored in increasing order [ a,c,f,g ] i
-       So I(head)-g a left dangling branch, and F(head)-g is right dangling one
+       So "I(head)-g" is a left dangling branch, and "F(head)-g" is right dangling one
     
 */
   
