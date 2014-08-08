@@ -421,10 +421,6 @@ class DependencyMaker(tagger:Tagger) {
     -- By construction, stack is always stored in increasing order [ a,c,f,g ] i
        So I(head)-g a left dangling branch, and F(head)-g is right dangling one
     
-    -- state contains {i,n,stack,parse} and 
-    -- state.valid_moves
-    -- state.transition(move) -> new state
-    -- recursive parse?  state.end_parse=(i+1>=n and stack empty)
 */
   
   case class CurrentState(i:Int, stack:List[Int], parse:ParseState) {
