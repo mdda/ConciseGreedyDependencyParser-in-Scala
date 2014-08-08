@@ -441,19 +441,63 @@ class DependencyMaker(tagger:Tagger) {
       if(stack.length>=1)          LEFT  else INVALID
     ).filterNot( _ == INVALID).toSet
     
+    def parse_complete = (stack.length==0 && (i+1) >= parse.heads.length)
+
 /*    
-    def get_valid_moves(i, n, stack_depth):
-        moves = []
-        if (i+1) < n:
-            moves.append(SHIFT)
-        if stack_depth >= 2:
-            moves.append(RIGHT)
-        if stack_depth >= 1:
-            moves.append(LEFT)
-        return moves
 */    
   }
     
+  def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
+  def parse(sentence:Sentence):List[Int] = process(sentence, false)
+    
+  def process(sentence:Sentence, train:Boolean):List[Int] = {
+    //print "train_one(%d, n=%d, %s)" % (itn, n, words, )
+    //print " gold_heads = %s" % (gold_heads, )
+  
+    def move_through_sentence_from(state: CurrentState): CurrentState = {
+      if(state.parse_complete) {
+        state // This the answer!
+      }
+      else {
+        val guess:Move = INVALID
+        
+        move_through_sentence_from( state.transition(guess) ) 
+      }
+    }
+    
+    // This is assuming that the sentence has 2 entries pre-pended, and the stack starts at {1} ?
+    val tags_guessed = tagger.tag(sentence)
+
+    val final_state = move_through_sentence_from( CurrentState(2, List(1), CurrentParseInit(sentence.length)) )
+    
+
+    /*
+        while stack or (i + 1) < n:
+            #print "  i/n=%d/%d stack=" % (i,n ), stack
+            features = extract_features(words, tags, i, n, stack, parse)
+            scores = self.model.score(features)
+            
+            valid_moves = get_valid_moves(i, n, len(stack))
+            guess = max(valid_moves, key=lambda move: scores[move])
+            
+            // vvv
+            gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
+            assert gold_moves
+            best = max(gold_moves, key=lambda move: scores[move])
+            
+            self.model.update(best, guess, features)
+            // ^^^
+            
+            i = transition(guess, i, stack, parse)
+            
+            ???self.confusion_matrix[best][guess] += 1
+            
+        // This is # of words with correct head
+        return len([i for i in range(n-1) if parse.heads[i] == gold_heads[i]]) 
+*/        
+    Nil
+  }
+
 }
 
 /*
