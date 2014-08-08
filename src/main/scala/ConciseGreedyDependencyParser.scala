@@ -406,9 +406,9 @@ class DependencyMaker(tagger:Tagger) {
     val heads = Array[Int](n) // This is used for 'n' elsewhere
     
     // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
-    // Entries (0, ..., n-1) are words, (n) is the 'ROOT'
-    val lefts  = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
-    val rights = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
+    // Entries (0, ..., n-1) are words, (n) is the 'ROOT'  ('to' is INCLUSIVE)
+    val lefts  = (0 to n).map( i => DefaultList(Nil, 0) ).toArray
+    val rights = (0 to n).map( i => DefaultList(Nil, 0) ).toArray
     ParseState(n, heads, lefts, rights)
   }
 
