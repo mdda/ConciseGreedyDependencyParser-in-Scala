@@ -390,25 +390,26 @@ class DependencyMaker(tagger:Tagger) {
     def ::(a: Int) = DefaultList(a::list, default)
   }
 
-  case class ParseState(heads:Array[Int], lefts:Array[DefaultList], rights:Array[DefaultList]) { // NB: Insert at start, not at end...
+  case class ParseState(n:Int, heads:Array[Int], lefts:Array[DefaultList], rights:Array[DefaultList]) { // NB: Insert at start, not at end...
       // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
       def add(head:Int, child:Int) = {
         if(child<head) {
-          ParseState(heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
+          ParseState(n, heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
         } 
         else {
-          ParseState(heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
+          ParseState(n, heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
         }
       }
   }
   def ParseStateInit(n:Int) = {
     // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
-    val heads = Array[Int](n) // maybe this should be n-1? (not important, really)
+    val heads = Array[Int](n) // This is used for 'n' elsewhere
     
     // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
+    // Entries (0, ..., n-1) are words, (n) is the 'ROOT'
     val lefts  = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
     val rights = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
-    ParseState(heads, lefts, rights)
+    ParseState(n, heads, lefts, rights)
   }
 
 /*
@@ -436,12 +437,13 @@ class DependencyMaker(tagger:Tagger) {
     }
     
     def valid_moves:Set[Move] = List[Move](  // only depends on stack_depth (not parse itself)
-      if(i+1 < parse.heads.length) SHIFT else INVALID,
-      if(stack.length>=2)          RIGHT else INVALID,
-      if(stack.length>=1)          LEFT  else INVALID
+      if(i < parse.n -1 )  SHIFT else INVALID, // i.e. not yet at the last word in sentence
+      if(stack.length>=2)  RIGHT else INVALID,
+      if(stack.length>=1)  LEFT  else INVALID
     ).filterNot( _ == INVALID).toSet
     
-    def parse_complete = (stack.length==0 && (i+1) >= parse.heads.length)
+    // This may be equivalent to there being no valid_moves
+    def parse_complete = !(stack.length>0 || i<(parse.n-1)) // i.e. we've at (or beyond) the last word, and have no stack left
 
 /*    
 */    
@@ -454,20 +456,25 @@ class DependencyMaker(tagger:Tagger) {
     //print "train_one(%d, n=%d, %s)" % (itn, n, words, )
     //print " gold_heads = %s" % (gold_heads, )
     
-    // This is assuming that the sentence has 2 entries pre-pended, and the stack starts at {1} ?
+    // NB: Our structure just has a 'pure' list of sentences.  The root will point to (n)
+    // Previously it was assumed that the sentence has 1 entry pre-pended, and the stack starts at {1}
     val tags = tagger.tag(sentence)
   
     def move_through_sentence_from(state: CurrentState): CurrentState = {
+      val valid_moves = state.valid_moves
       if(state.parse_complete) {
+        if(valid_moves.size > 0) {          // Is this exactly the same as having no valid moves?
+          println("Valid Moves left where parse_complete")
+        }
         state // This the answer!
       }
       else {
         //print "  i/n=%d/%d stack=" % (i,n ), stack
         
+        
         //val features = extract_features(words, tags, state)
         //val scores = perceptron.score(features)
             
-        //val valid_moves = state.get_valid_moves()
         //val guess = max(valid_moves, key=lambda move: scores[move])
         val guess:Move = INVALID
             
@@ -480,8 +487,8 @@ class DependencyMaker(tagger:Tagger) {
         move_through_sentence_from( state.transition(guess) ) 
       }
     }
-    
-    val final_state = move_through_sentence_from( CurrentState(2, List(1), ParseStateInit(sentence.length)) )
+
+    val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
    
     final_state.parse.heads.toList
   }
