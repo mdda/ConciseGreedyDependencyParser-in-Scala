@@ -390,25 +390,25 @@ class DependencyMaker(tagger:Tagger) {
     def ::(a: Int) = DefaultList(a::list, default)
   }
 
-  case class CurrentParse(heads:Array[Int], lefts:Array[DefaultList], rights:Array[DefaultList]) { // NB: Insert at start, not at end...
+  case class ParseState(heads:Array[Int], lefts:Array[DefaultList], rights:Array[DefaultList]) { // NB: Insert at start, not at end...
       // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
       def add(head:Int, child:Int) = {
         if(child<head) {
-          CurrentParse(heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
+          ParseState(heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
         } 
         else {
-          CurrentParse(heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
+          ParseState(heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
         }
       }
   }
-  def CurrentParseInit(n:Int) = {
+  def ParseStateInit(n:Int) = {
     // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
     val heads = Array[Int](n) // maybe this should be n-1? (not important, really)
     
     // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
     val lefts  = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
     val rights = (0 to n+1).map( i => DefaultList(Nil, 0) ).toArray
-    CurrentParse(heads, lefts, rights)
+    ParseState(heads, lefts, rights)
   }
 
 /*
@@ -426,7 +426,7 @@ class DependencyMaker(tagger:Tagger) {
     -- recursive parse?  state.end_parse=(i+1>=n and stack empty)
 */
   
-  case class CurrentState(i:Int, stack:List[Int], parse:CurrentParse) {
+  case class CurrentState(i:Int, stack:List[Int], parse:ParseState) {
     def transition(move:Move):CurrentState = move match {
       // i either increases and lengthens the stack, 
       case SHIFT => CurrentState(i+1, i::stack, parse)
@@ -453,49 +453,37 @@ class DependencyMaker(tagger:Tagger) {
   def process(sentence:Sentence, train:Boolean):List[Int] = {
     //print "train_one(%d, n=%d, %s)" % (itn, n, words, )
     //print " gold_heads = %s" % (gold_heads, )
+    
+    // This is assuming that the sentence has 2 entries pre-pended, and the stack starts at {1} ?
+    val tags = tagger.tag(sentence)
   
     def move_through_sentence_from(state: CurrentState): CurrentState = {
       if(state.parse_complete) {
         state // This the answer!
       }
       else {
+        //print "  i/n=%d/%d stack=" % (i,n ), stack
+        
+        //val features = extract_features(words, tags, state)
+        //val scores = perceptron.score(features)
+            
+        //val valid_moves = state.get_valid_moves()
+        //val guess = max(valid_moves, key=lambda move: scores[move])
         val guess:Move = INVALID
+            
+        if(train) {
+          //val gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
+          //val best:Move  = max(gold_moves, key=lambda move: scores[move])
+          //perceptron.update(best, guess, features)
+        }
         
         move_through_sentence_from( state.transition(guess) ) 
       }
     }
     
-    // This is assuming that the sentence has 2 entries pre-pended, and the stack starts at {1} ?
-    val tags_guessed = tagger.tag(sentence)
-
-    val final_state = move_through_sentence_from( CurrentState(2, List(1), CurrentParseInit(sentence.length)) )
-    
-
-    /*
-        while stack or (i + 1) < n:
-            #print "  i/n=%d/%d stack=" % (i,n ), stack
-            features = extract_features(words, tags, i, n, stack, parse)
-            scores = self.model.score(features)
-            
-            valid_moves = get_valid_moves(i, n, len(stack))
-            guess = max(valid_moves, key=lambda move: scores[move])
-            
-            // vvv
-            gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
-            assert gold_moves
-            best = max(gold_moves, key=lambda move: scores[move])
-            
-            self.model.update(best, guess, features)
-            // ^^^
-            
-            i = transition(guess, i, stack, parse)
-            
-            ???self.confusion_matrix[best][guess] += 1
-            
-        // This is # of words with correct head
-        return len([i for i in range(n-1) if parse.heads[i] == gold_heads[i]]) 
-*/        
-    Nil
+    val final_state = move_through_sentence_from( CurrentState(2, List(1), ParseStateInit(sentence.length)) )
+   
+    final_state.parse.heads.toList
   }
 
 }
