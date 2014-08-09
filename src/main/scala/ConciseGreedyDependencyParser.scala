@@ -388,21 +388,11 @@ class DependencyMaker(tagger:Tagger) {
   //val getClassNum = classes.zipWithIndex.toMap.withDefaultValue(-1) // -1 => "CLASS-NOT-FOUND"
   
   val perceptron = new Perceptron(move_names.length)
-  //confusionmatrix == UNUSED  
-  
-  case class DefaultList(list:List[Int], default:Int=0) { 
-    def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else {
-      throw new Exception(s"Hit Default in DefaultList idx = ${idx}")          
-      default
-    }
-    def ::(a: Int) = DefaultList(a::list, default)
-    def length = list.length
-  }
 
-  case class ParseState(n:Int, heads:Vector[Int], lefts:Vector[DefaultList], rights:Vector[DefaultList]) { // NB: Insert at start, not at end...
+  case class ParseState(n:Int, heads:Vector[Int], lefts:Vector[List[Int]], rights:Vector[List[Int]]) { // NB: Insert at start, not at end...
       // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
       def add(head:Int, child:Int) = {
-        println(s"ParseState.add(child=$child, head=$head)")
+        //println(s"ParseState.add(child=$child, head=$head)")
         //println(s"ParseState :: ${this}")
         if(child<head) {
           ParseState(n, heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
@@ -418,8 +408,8 @@ class DependencyMaker(tagger:Tagger) {
     
     // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
     // Entries (0, ..., n-1) are words, (n) is the 'ROOT'  ('to' is INCLUSIVE)
-    val lefts  = (0 to n).map( i => DefaultList(Nil, 0) ).toVector
-    val rights = (0 to n).map( i => DefaultList(Nil, 0) ).toVector
+    val lefts  = (0 to n).map( i => List[Int]() ).toVector
+    val rights = (0 to n).map( i => List[Int]() ).toVector
     ParseState(n, heads, lefts, rights)
   }
 
@@ -538,7 +528,7 @@ class DependencyMaker(tagger:Tagger) {
         if(i+2 < parse.n) data(i+2) else "".asInstanceOf[T]
       )
       
-      def get_parse_context[T<:String](idx:Int, deps:Vector[DefaultList], data:Vector[T]):(Int,T,T) = { // Applies to both Word and ClassName (depth is implict from stack length)
+      def get_parse_context[T<:String](idx:Int, deps:Vector[List[Int]], data:Vector[T]):(Int,T,T) = { // Applies to both Word and ClassName (depth is implict from stack length)
         if(idx<0) { // For the cases of empty stack
           (0, "".asInstanceOf[T], "".asInstanceOf[T]) 
         }
