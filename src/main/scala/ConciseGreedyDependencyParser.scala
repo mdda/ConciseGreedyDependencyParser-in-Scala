@@ -654,7 +654,7 @@ class DependencyMaker(tagger:Tagger) {
         state // This the answer!
       }
       else {
-        println(s"  i/n=$state.i/$state.parse.n stack=$state.stack")
+        println(s"  i/n=${state.i}/${state.parse.n} stack=${state.stack}")
         val features = state.extract_features(words, tags)
 
         // This will produce scores for features that aren't valid too
@@ -666,6 +666,9 @@ class DependencyMaker(tagger:Tagger) {
         if(train) {  // Update the perceptron
           //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
           val gold_moves = state.get_gold_moves(gold_heads)
+          if(gold_moves.size == 0) {
+            println("No Gold Moves!")
+          }
           val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
           perceptron.update(best, guess, features.keys)
         }
