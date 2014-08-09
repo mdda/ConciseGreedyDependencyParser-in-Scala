@@ -762,38 +762,66 @@ object Main extends App {
   
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
+    val utils = new CGDP
     
-    if(args.contains("learn")) {
-      val utils = new CGDP
-      
-      //val sentences = utils.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
-      val training_sentences = (for (
-         (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
-         if( file.getName.endsWith(".dp") )
-         //if(i<5)
-      ) yield utils.read_CONLL(file.getPath) ).flatMap( a => a ) 
-  
-      val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences)
-      //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
-      
-      val tagger = new Tagger(classes, tag_dict)
-      //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
-      tagger.train(training_sentences)
-      
-      val s = training_sentences(0)
-      //benchmark( Unit=>{ tagger.train_one(s) }, 50) // Mainly 'score'
-      println(s"""Text = ${s.map(_.raw).mkString(" ")}""")
-      println(s"original = ${s}")
-      println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
-      
-      if(true) {
-        //val fos = new FileOutputStream("tagger-toString.txt")
-        val fos = new PrintWriter("tagger-toString.txt")
-        fos.write(tagger.toString)
-        fos.close
+    //val sentences = utils.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
+    val training_sentences = (for (
+       (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
+       if( file.getName.endsWith(".dp") )
+       //if(i<5)
+    ) yield utils.read_CONLL(file.getPath) ).flatMap( a => a ) 
+    
+    if(args.contains("train")) {
+      if(args.contains("tagger") || args.contains("both")) {
+        val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences)
+        //benchmark( Unit=>{ val (classes, tag_dict) = Tagger.classes_and_tagdict(training_sentences) }, 30)
+        
+        val tagger = new Tagger(classes, tag_dict)
+        //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
+        tagger.train(training_sentences)
+        
+        val s = training_sentences(0)
+        //benchmark( Unit=>{ tagger.train_one(s) }, 50) // Mainly 'score'
+        println(s"""Text = ${s.map(_.raw).mkString(" ")}""")
+        println(s"original = ${s}")
+        println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
+        
+        if(args.contains("save") ) {
+          //val fos = new FileOutputStream("tagger-toString.txt")
+          val fos = new PrintWriter("tagger-toString.txt")
+          fos.write(tagger.toString)
+          fos.close
+        }
       }
+      if(args.contains("deps") || args.contains("both")) {
+        // First, load the tagger
+        val file_lines = scala.io.Source.fromFile("tagger-toString.txt").getLines
+        val tagger = Tagger.load(file_lines)
+        
+        // Now instatiate a new DependencyMaker
+        val dm = new DependencyMaker(tagger)
+        
+        //benchmark( Unit=>{ dm.train(training_sentences) }, 10) // Overall efficiency - not dramatic
+        //dm.train(training_sentences)
+        
+        val s = training_sentences(0)
+        dm.train_one(s)
+/*
+        //benchmark( Unit=>{ dm.train_one(s) }, 50) // Mainly 'score'
+        println(s"""Text = ${s.map(_.raw).mkString(" ")}""")
+        println(s"original = ${s}")
+        println(s"dependencies = ${s.map{_.norm}.zip(dm.parse(s))}")
+*/
+        if(args.contains("save") ) {
+          val fos = new PrintWriter("dependencies-toString.txt")
+          fos.write(dm.toString)
+          fos.close
+        }
+      }
+      
     }
-    else if(args.contains("load")) {
+    
+    else if(args.contains("test")) {
       val utils = new CGDP
       
       val file_lines = scala.io.Source.fromFile("tagger-toString.txt").getLines
@@ -804,7 +832,7 @@ object Main extends App {
       println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
     }
     else {
-      printf("Usage :\nrun {learn}\n")
+      printf("Usage :\nrun {train|test} {tagger|deps|both} {save}\n")
     }
     
   }
