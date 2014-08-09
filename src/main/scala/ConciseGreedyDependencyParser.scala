@@ -534,9 +534,9 @@ class DependencyMaker(tagger:Tagger) {
       }
 
       // Set up the context pieces --- the word (W) and tag (T) of:
-      //   S0-2: Top three words on the stack
-      //   N0-2: First three words of the buffer
-      //   n0b1, n0b2: Two leftmost children of the first word of the buffer
+      //   s0,1,2: Top three words on the stack
+      //   n0,1,2: Next three words of the buffer (inluding this one)
+      //   n0b1, n0b2: Two leftmost children of the current buffer word
       //   s0b1, s0b2: Two leftmost children of the top word of the stack
       //   s0f1, s0f2: Two rightmost children of the top word of the stack
 
@@ -619,6 +619,8 @@ class DependencyMaker(tagger:Tagger) {
 */    
   }
     
+  def train(sentences:List[Sentence]):Unit = sentences.foreach( train_one )
+  
   def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
   def parse(sentence:Sentence):List[Int] = process(sentence, false)
     
