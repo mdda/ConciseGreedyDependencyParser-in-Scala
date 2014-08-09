@@ -453,6 +453,8 @@ class DependencyMaker(tagger:Tagger) {
         Set(LEFT)
       }
       else {
+        // TODO : Actually, it looks like this logic can be flipped over : 
+        //        construct a 'val non_gold' and return 'valid - non_gold'
         val all_moves = Set(SHIFT, RIGHT, LEFT)
         var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
         
