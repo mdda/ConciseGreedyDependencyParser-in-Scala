@@ -540,7 +540,8 @@ class DependencyMaker(tagger:Tagger) {
       //   s0b1, s0b2: Two leftmost children of the top word of the stack
       //   s0f1, s0f2: Two rightmost children of the top word of the stack
 
-      val stack0 = if(stack.isEmpty) -1 else stack.head
+      val n0 = i // Just for notational consistency
+      val s0 = if(stack.isEmpty) -1 else stack.head
 
       val (ws0, ws1, ws2) = get_stack_context(words)
       val (ts0, ts1, ts2) = get_stack_context(tags)
@@ -548,25 +549,23 @@ class DependencyMaker(tagger:Tagger) {
       val (wn0, wn1, wn2) = get_buffer_context(words)
       val (tn0, tn1, tn2) = get_buffer_context(tags)
     
-      val (vn0b, wn0b1, wn0b2) = get_parse_context(i, parse.lefts, words)
-      val (_   , tn0b1, tn0b2) = get_parse_context(i, parse.lefts, tags)
+      val (vn0b, wn0b1, wn0b2) = get_parse_context(n0, parse.lefts, words)
+      val (_   , tn0b1, tn0b2) = get_parse_context(n0, parse.lefts, tags)
 
-      val (vn0f, wn0f1, wn0f2) = get_parse_context(i, parse.rights, words)
-      val (_,    tn0f1, tn0f2) = get_parse_context(i, parse.rights, tags)
+      val (vn0f, wn0f1, wn0f2) = get_parse_context(n0, parse.rights, words)
+      val (_,    tn0f1, tn0f2) = get_parse_context(n0, parse.rights, tags)
       
-      val (vs0b, ws0b1, ws0b2) = get_parse_context(stack0, parse.lefts, words)
-      val (_,    ts0b1, ts0b2) = get_parse_context(stack0, parse.lefts, tags)
+      val (vs0b, ws0b1, ws0b2) = get_parse_context(s0, parse.lefts, words)
+      val (_,    ts0b1, ts0b2) = get_parse_context(s0, parse.lefts, tags)
     
-      val (vs0f, ws0f1, ws0f2) = get_parse_context(stack0, parse.rights, words)
-      val (_,    ts0f1, ts0f2) = get_parse_context(stack0, parse.rights, tags)
+      val (vs0f, ws0f1, ws0f2) = get_parse_context(s0, parse.rights, words)
+      val (_,    ts0f1, ts0f2) = get_parse_context(s0, parse.rights, tags)
       
           
-      //  String-distance :: Cap numeric features at 5? 
-      val ds0n0 = if(stack0 >= 0) math.min(i - stack0, 5) else 0
+      //  String-distance :: Cap numeric features at 5? (NB: n0 always > s0, by construction)
+      val dist = if(s0 >= 0) math.min(n0 - s0, 5) else 0  // WAS :: ds0n0
       
-      feature_set += Feature("bias",       "")  // It's useful to have a constant feature, which acts sort of like a prior
-
-      //feature_set += Feature("w suffix",   word(i).takeRight(3))  
+      feature_set += Feature("bias", "")  // It's useful to have a constant feature, which acts sort of like a prior
 
       // Add word and tag unigrams
       List(wn0, wn1, wn2, ws0, ws1, ws2, wn0b1, wn0b2, ws0b1, ws0b2, ws0f1, ws0f2).foreach(
@@ -581,44 +580,42 @@ class DependencyMaker(tagger:Tagger) {
         case ((word,tag), idx) => { if( word!=0 || tag!=0 ) feature_set += Feature(s"wt$idx", s"w=$word t=$tag") }
       }
 
-/*      
-*/
+      // Add some bigrams
+      feature_set += Feature("w s0n0", s"$ws0 $wn0")
+      feature_set += Feature("t s0n0", s"$ts0 $tn0")
+      feature_set += Feature("t n0n1", s"$tn0 $tn1")
 
+      // Add some trigrams
+      feature_set += Feature("wtw nns", s"$wn0/$tn0 $ws0")
+      feature_set += Feature("wtt nns", s"$wn0/$tn0 $ts0")
+      feature_set += Feature("wtw ssn", s"$ws0/$ts0 $wn0")
+      feature_set += Feature("wtt ssn", s"$ws0/$ts0 $tn0")
+
+      // Add a quadgram
+      feature_set += Feature("wtwt", s"$ws0/$ts0 $wn0/$tn0")
+      
+      // Add some tag trigrams
+      List((tn0, tn1, tn2),     (ts0, tn0, tn1),     (ts0, ts1, tn0),    (ts0, ts1, ts1), 
+           (ts0, ts0f1, tn0),   (ts0, ts0f1, tn0),   (ts0, tn0, tn0b1),
+           (ts0, ts0b1, ts0b2), (ts0, ts0f1, ts0f2), 
+           (tn0, tn0b1, tn0b2)
+          ).zipWithIndex.foreach{
+        case ((t0,t1,t2), idx) => { if( t0!=0 || t1!=0 || t2!=0 ) feature_set += Feature(s"ttt-$idx", s"$t0 $t1 $t2") }
+      }
+      
+      // Add some valency and distance features
+      List( (ws0, vs0f), (ws0, vs0b), (wn0, vn0b),
+            (ts0, vs0f), (ts0, vs0b), (tn0, vn0b),
+            (ws0, dist), (wn0, dist), (ts0, dist), (tn0, dist),
+            ("t"+tn0+ts0, dist), ("w"+wn0+ws0, dist)
+          ).zipWithIndex.foreach{
+        case ((str, v), idx) => { if( str.length>0 || v!=0 ) feature_set += Feature(s"val$idx", s"$str $v") }
+      } 
     
       // All weights on this set of features are ==1
       feature_set.map( f => (f, 1:Score) ).toMap
     }
 /*    
-def extract_features(words, tags, n0, n, stack, parse):
-
-    # Add some bigrams
-    features['s0w=%s,  n0w=%s' % (Ws0, Wn0)] = 1
-    features['wn0tn0-ws0 %s/%s %s' % (Wn0, Tn0, Ws0)] = 1
-    features['wn0tn0-ts0 %s/%s %s' % (Wn0, Tn0, Ts0)] = 1
-    features['ws0ts0-wn0 %s/%s %s' % (Ws0, Ts0, Wn0)] = 1
-    features['ws0-ts0 tn0 %s/%s %s' % (Ws0, Ts0, Tn0)] = 1
-    features['wt-wt %s/%s %s/%s' % (Ws0, Ts0, Wn0, Tn0)] = 1
-    features['tt s0=%s n0=%s' % (Ts0, Tn0)] = 1
-    features['tt n0=%s n1=%s' % (Tn0, Tn1)] = 1
-
-    # Add some tag trigrams
-    trigrams = ((Tn0, Tn1, Tn2), (Ts0, Tn0, Tn1), (Ts0, Ts1, Tn0), 
-                (Ts0, Ts0f1, Tn0), (Ts0, Ts0f1, Tn0), (Ts0, Tn0, Tn0b1),
-                (Ts0, Ts0b1, Ts0b2), (Ts0, Ts0f1, Ts0f2), (Tn0, Tn0b1, Tn0b2),
-                (Ts0, Ts1, Ts1))
-    for i, (t1, t2, t3) in enumerate(trigrams):
-        if t1 or t2 or t3:
-            features['ttt-%d %s %s %s' % (i, t1, t2, t3)] = 1
-
-    # Add some valency and distance features
-    vw = ((Ws0, Vs0f), (Ws0, Vs0b), (Wn0, Vn0b))
-    vt = ((Ts0, Vs0f), (Ts0, Vs0b), (Tn0, Vn0b))
-    d = ((Ws0, Ds0n0), (Wn0, Ds0n0), (Ts0, Ds0n0), (Tn0, Ds0n0),
-         ('t' + Tn0+Ts0, Ds0n0), ('w' + Wn0+Ws0, Ds0n0))
-    for i, (w_t, v_d) in enumerate(vw + vt + d):
-        if w_t or v_d:
-            features['val/d-%d %s %d' % (i, w_t, v_d)] = 1
-    return features
 */    
   }
     
