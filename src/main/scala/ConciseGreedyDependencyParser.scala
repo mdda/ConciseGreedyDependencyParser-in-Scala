@@ -623,7 +623,7 @@ class DependencyMaker(tagger:Tagger) {
         state // This the answer!
       }
       else {
-        println(s"  i/n=${state.i}/${state.parse.n} stack=${state.stack}")
+        //println(s"  i/n=${state.i}/${state.parse.n} stack=${state.stack}")
         val features = state.extract_features(words, tags)
 
         // This will produce scores for features that aren't valid too
@@ -635,9 +635,8 @@ class DependencyMaker(tagger:Tagger) {
         if(train) {  // Update the perceptron
           //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
           val gold_moves = state.get_gold_moves(gold_heads)
-          if(gold_moves.size == 0) {
-            throw new Exception("No Gold Moves!")          
-          }
+          if(gold_moves.size == 0) { throw new Exception("No Gold Moves!") }
+          
           val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
           perceptron.update(best, guess, features.keys)
         }
@@ -659,7 +658,6 @@ class DependencyMaker(tagger:Tagger) {
 
 /*
 */
-
 
 class CGDP {
   def read_CONLL(path:String): List[Sentence] = {
@@ -753,6 +751,8 @@ object Main extends App {
         
         val tagger = new Tagger(classes, tag_dict)
         //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
+
+        // TODO : Look at performance over each iteration...
         tagger.train(training_sentences)
         
         val s = training_sentences(0)
@@ -775,8 +775,9 @@ object Main extends App {
         
         // Now instatiate a new DependencyMaker
         val dm = new DependencyMaker(tagger)
-        
         //benchmark( Unit=>{ dm.train(training_sentences) }, 10) // Overall efficiency - not dramatic
+
+        // TODO : Look at performance over each iteration...
         dm.train(training_sentences)
         
         val s = training_sentences(0)
