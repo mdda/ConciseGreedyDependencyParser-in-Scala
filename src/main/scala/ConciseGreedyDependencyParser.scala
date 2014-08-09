@@ -372,6 +372,14 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
 
 }
 
+object DependencyMaker {
+ def load(lines:Iterator[String], tagger:Tagger):DependencyMaker = {
+    val dm = new DependencyMaker(tagger)
+    dm.perceptron.load(lines)
+    dm
+  }
+  
+}
 
 class DependencyMaker(tagger:Tagger) {
   val SHIFT:Move=0; val RIGHT:Move=1; val LEFT:Move=2; val INVALID:Move=(-1)
@@ -671,6 +679,9 @@ class DependencyMaker(tagger:Tagger) {
     final_state.parse.heads.toList
   }
 
+  override def toString():String = {
+    perceptron.toString
+  }
 }
 
 /*
@@ -711,7 +722,6 @@ class CGDP {
     
     val s3 = s2.replaceAllLiterally( """#POINT#""", """.""").replaceAllLiterally("#ELIPSIS#", "...") // Undo dot protection 
     
-    // case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1))
     s3.split("""\s+""").map( word => WordData(word) ).toList
   }
 
@@ -752,6 +762,7 @@ object Main extends App {
   
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
+    
     if(args.contains("learn")) {
       val utils = new CGDP
       
