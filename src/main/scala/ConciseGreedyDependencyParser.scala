@@ -448,66 +448,37 @@ class DependencyMaker(tagger:Tagger) {
       }
       
       val valid = valid_moves
-      println(s"valid moves = ${valid}")
+      //println(s"valid moves = ${valid}")
       
       if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head)) {
-        println(" gold move shortcut : SHIFT")
+        //println(" gold move shortcut : SHIFT")
         Set(SHIFT) // First condition obvious, second rather weird
       }
       else if( gold_heads(stack.head) == i ) {
-        println(" gold move shortcut : LEFT")
+        //println(" gold move shortcut : LEFT")
         Set(LEFT) // This move is a must, since the gold_heads tell us to do it
       }
       else {
-        val python_logic = {
-          // HMM  : Actually, it looks like this logic (from Python) can be flipped over : 
-          //        by constructing a 'val non_gold' and return 'valid - non_gold'
-          val all_moves = Set(SHIFT, RIGHT, LEFT)
-          var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
-          println(s" costly moves : ${costly}")
-          
-          // If the word second in the stack is its gold head, Left is incorrect
-          if( stack.length >= 2 && gold_heads(stack.head) == stack.tail.head ) {
-            costly += (LEFT)
-          }
-          
-          // If there are any dependencies between i and the stack, pushing i will lose them.
-          if( deps_between(i, stack) ) {  // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
-            costly += (SHIFT)
-          }
-          
-          // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-          if( deps_between(stack.head, ((i+1) until (parse.n-1)).toList) ) { // UNTIL is EXCLUSIVE of top
-            costly += (LEFT)
-            costly += (RIGHT)
-          }
-          println(s" costly moves finally : ${costly}")
-          
-          (all_moves -- costly)
-        }
-        val new_logic = {
-          // If the word second in the stack is its gold head, Left is incorrect
-          val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
-          
-          // If there are any dependencies between i and the stack, pushing i will lose them.
-          val dont_push_i    = deps_between(i, stack) // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
-          
-          // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-          val dont_pop_stack = deps_between(stack.head, (i+1 until parse.n-1).toList) // UNTIL is EXCLUSIVE of top
-          
-          val non_gold = List[Move](
-            if( left_incorrect )  LEFT  else INVALID,
-            if( dont_push_i )     SHIFT else INVALID,
-            if( dont_pop_stack )  LEFT  else INVALID,
-            if( dont_pop_stack )  RIGHT else INVALID
-          ).toSet
-          (valid -- non_gold)
-        }
-        if( new_logic != python_logic ) { // Test the two different approaches for equality
-          throw new Exception(s"Gold Move Logic differs : $new_logic != $python_logic")          
-        }
+        // Original Python logic has been flipped over by constructing a 'val non_gold' and return 'valid - non_gold'
         
-        python_logic
+        // If the word second in the stack is its gold head, Left is incorrect
+        val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
+        
+        // If there are any dependencies between i and the stack, pushing i will lose them.
+        val dont_push_i    = deps_between(i, stack) // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
+        
+        // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
+        val dont_pop_stack = deps_between(stack.head, (i+1 until parse.n-1).toList) // UNTIL is EXCLUSIVE of top
+        
+        val non_gold = List[Move](
+          if( left_incorrect )  LEFT  else INVALID,
+          if( dont_push_i )     SHIFT else INVALID,
+          if( dont_pop_stack )  LEFT  else INVALID,
+          if( dont_pop_stack )  RIGHT else INVALID
+        ).toSet
+        
+        // return the (remaining) moves, which are 'gold'
+        (valid -- non_gold)
       }
     }
     
