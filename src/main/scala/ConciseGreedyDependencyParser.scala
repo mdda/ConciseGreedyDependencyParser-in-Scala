@@ -390,7 +390,7 @@ class DependencyMaker(tagger:Tagger) {
     def ::(a: Int) = DefaultList(a::list, default)
   }
 
-  case class ParseState(n:Int, heads:Array[Int], lefts:Array[DefaultList], rights:Array[DefaultList]) { // NB: Insert at start, not at end...
+  case class ParseState(n:Int, heads:Vector[Int], lefts:Vector[DefaultList], rights:Vector[DefaultList]) { // NB: Insert at start, not at end...
       // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
       def add(head:Int, child:Int) = {
         if(child<head) {
@@ -403,12 +403,12 @@ class DependencyMaker(tagger:Tagger) {
   }
   def ParseStateInit(n:Int) = {
     // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
-    val heads = Array[Int](n) // This is used for 'n' elsewhere
+    val heads = Vector[Int](n) // This is used for 'n' elsewhere
     
     // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
     // Entries (0, ..., n-1) are words, (n) is the 'ROOT'  ('to' is INCLUSIVE)
-    val lefts  = (0 to n).map( i => DefaultList(Nil, 0) ).toArray
-    val rights = (0 to n).map( i => DefaultList(Nil, 0) ).toArray
+    val lefts  = (0 to n).map( i => DefaultList(Nil, 0) ).toVector
+    val rights = (0 to n).map( i => DefaultList(Nil, 0) ).toVector
     ParseState(n, heads, lefts, rights)
   }
 
