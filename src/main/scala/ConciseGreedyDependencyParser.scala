@@ -441,7 +441,68 @@ class DependencyMaker(tagger:Tagger) {
     // This may be equivalent to there being no valid_moves
     def parse_complete = !(stack.length>0 || i<(parse.n-1)) // i.e. we've at (or beyond) the last word, and have no stack left
 
+    def get_gold_moves(gold_heads:Vector[Int]) = {
+      def deps_between(target:Int, others:List[Int]) = {
+        others.exists( word => (gold_heads(word)==target || gold_heads(target) == word))
+      }
+      val valid = valid_moves
+      if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head)) {
+        Set(SHIFT)
+      }
+      else if( gold_heads(stack.head) == i ) {
+        Set(LEFT)
+      }
+      else {
+        val all_moves = Set(SHIFT, RIGHT, LEFT)
+        var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
+        
+        // If the word second in the stack is its gold head, Left is incorrect
+        if( stack.length >= 2 && gold_heads(stack.head) == stack.tail.head ) {
+          costly += (LEFT)
+        }
+        
+        // If there are any dependencies between i and the stack, pushing i will lose them.
+        if( deps_between(i, stack) ) {  // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
+          costly += (SHIFT)
+        }
+        
+        // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
+        if( deps_between(stack.head, (i+1 until parse.n-1).toList) ) { // UNTIL is EXCLUSIVE of top
+          costly += (LEFT)
+          costly += (RIGHT)
+        }
+        
+        (all_moves -- costly)
+      }
+    }
 /*    
+def get_gold_moves(n0, n, stack, heads, gold):
+
+    valid = get_valid_moves(n0, n, len(stack))
+    if not stack or (SHIFT in valid and gold[n0] == stack[-1]):
+        return [SHIFT]
+    if gold[stack[-1]] == n0:
+        return [LEFT]
+        
+    costly = set([m for m in MOVES if m not in valid])
+    #print "Costly = ", costly
+    
+    # If the word behind s0 is its gold head, Left is incorrect
+    if len(stack) >= 2 and gold[stack[-1]] == stack[-2]:
+        costly.add(LEFT)
+        
+    # If there are any dependencies between n0 and the stack,
+    # pushing n0 will lose them.
+    if SHIFT not in costly and deps_between(n0, stack, gold):
+        costly.add(SHIFT)
+        
+    # If there are any dependencies between s0 and the buffer, popping
+    # s0 will lose them.
+    if deps_between(stack[-1], range(n0+1, n-1), gold):
+        costly.add(LEFT)
+        costly.add(RIGHT)
+        
+    return [m for m in MOVES if m not in costly]
 */    
   }
     
@@ -468,7 +529,7 @@ class DependencyMaker(tagger:Tagger) {
         println(s"  i/n=$state.i/$state.parse.n stack=$state.stack")
         
         //val features = extract_features(words, tags, state)
-        val features = Map[Feature, Score]()
+        val features = Map[Feature, Score]()  // TODO !! 
 
         // This will produce scores for features that aren't valid too
         val score = perceptron.score(features, if(train) perceptron.current else perceptron.average)
@@ -480,7 +541,7 @@ class DependencyMaker(tagger:Tagger) {
           //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
           
           //val gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
-          val gold_moves = Set[Move]()
+          val gold_moves = Set[Move]() // TODO !! 
           val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
           perceptron.update(best, guess, features.keys)
         }
@@ -489,6 +550,7 @@ class DependencyMaker(tagger:Tagger) {
       }
     }
 
+    // This annotates the list of words so that parse.heads is its best guess when it finishes
     val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
    
     final_state.parse.heads.toList
@@ -497,120 +559,6 @@ class DependencyMaker(tagger:Tagger) {
 }
 
 /*
-
-    // This annotates the list of words so that parse.heads is its best guess
-    def parse(self, words):
-        n = len(words)
-        
-        i = 2  // Starting place in list (i.e. first word)
-        stack = [1]
-        parse = Parse(n)
-        
-        tags = self.tagger.tag(words)
-        while stack or (i+1) < n:
-            features = extract_features(words, tags, i, n, stack, parse)
-            scores = self.model.score(features)
-            
-            valid_moves = get_valid_moves(i, n, len(stack))
-            guess = max(valid_moves, key=lambda move: scores[move]) // This is the best scored move, of those that are valid
-            
-            i = transition(guess, i, stack, parse)
-            
-        // This is list of produced tags and 'heads'
-        return tags, parse.heads
-
-    def train_one(self, itn, words, gold_tags, gold_heads):
-        n = len(words)
-        
-        #print "train_one(%d, n=%d, %s)" % (itn, n, words, )
-        #print " gold_heads = %s" % (gold_heads, )
-        
-        i = 2
-        stack = [1]
-        parse = Parse(n)
-        
-        tags = self.tagger.tag(words)
-        while stack or (i + 1) < n:
-            #print "  i/n=%d/%d stack=" % (i,n ), stack
-            features = extract_features(words, tags, i, n, stack, parse)
-            scores = self.model.score(features)
-            
-            valid_moves = get_valid_moves(i, n, len(stack))
-            guess = max(valid_moves, key=lambda move: scores[move])
-            
-            // vvv
-            gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
-            assert gold_moves
-            best = max(gold_moves, key=lambda move: scores[move])
-            
-            self.model.update(best, guess, features)
-            // ^^^
-            
-            i = transition(guess, i, stack, parse)
-            
-            ???self.confusion_matrix[best][guess] += 1
-            
-        // This is # of words with correct head
-        return len([i for i in range(n-1) if parse.heads[i] == gold_heads[i]]) 
-*/
-/*
-// i either increases (SHIFT) and lengthens the stack, 
-//       or stays the same    and shortens the stack, and manipulates left&right 
-def transition(move, i, stack, parse):
-    if move == SHIFT:
-        stack.append(i)
-        return i + 1
-    elif move == RIGHT:
-        parse.add(stack[-2], stack.pop())
-        return i
-    elif move == LEFT:
-        parse.add(i, stack.pop())
-        return i
-    assert move in MOVES
-
-// only depends on stack_depth (not parse)
-def get_valid_moves(i, n, stack_depth):
-    moves = []
-    if (i+1) < n:
-        moves.append(SHIFT)
-    if stack_depth >= 2:
-        moves.append(RIGHT)
-    if stack_depth >= 1:
-        moves.append(LEFT)
-    return moves
-
-
-def get_gold_moves(n0, n, stack, heads, gold):
-    def deps_between(target, others, gold):
-        for word in others:
-            if gold[word] == target or gold[target] == word:
-                return True
-        return False
-
-    valid = get_valid_moves(n0, n, len(stack))
-    if not stack or (SHIFT in valid and gold[n0] == stack[-1]):
-        return [SHIFT]
-    if gold[stack[-1]] == n0:
-        return [LEFT]
-    costly = set([m for m in MOVES if m not in valid])
-    #print "Costly = ", costly
-    
-    # If the word behind s0 is its gold head, Left is incorrect
-    if len(stack) >= 2 and gold[stack[-1]] == stack[-2]:
-        costly.add(LEFT)
-        
-    # If there are any dependencies between n0 and the stack,
-    # pushing n0 will lose them.
-    if SHIFT not in costly and deps_between(n0, stack, gold):
-        costly.add(SHIFT)
-        
-    # If there are any dependencies between s0 and the buffer, popping
-    # s0 will lose them.
-    if deps_between(stack[-1], range(n0+1, n-1), gold):
-        costly.add(LEFT)
-        costly.add(RIGHT)
-        
-    return [m for m in MOVES if m not in costly]
 */
 
 /*
