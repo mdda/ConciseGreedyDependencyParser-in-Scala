@@ -763,14 +763,14 @@ object Main extends App {
         
         if(args.contains("save") ) {
           //val fos = new FileOutputStream("tagger-toString.txt")
-          val fos = new PrintWriter("tagger-toString.txt")
+          val fos = new PrintWriter("CGDP-tagger-data.txt")
           fos.write(tagger.toString)
           fos.close
         }
       }
       if(args.contains("deps") || args.contains("both")) {
         // First, load the tagger
-        val file_lines = scala.io.Source.fromFile("tagger-toString.txt").getLines
+        val file_lines = scala.io.Source.fromFile("CGDP-tagger-data.txt").getLines
         val tagger = Tagger.load(file_lines)
         
         // Now instatiate a new DependencyMaker
@@ -789,7 +789,7 @@ object Main extends App {
         println(s"dependencies = ${s.map{_.norm}.zip(dm.parse(s))}")
 */
         if(args.contains("save") ) {
-          val fos = new PrintWriter("dependencies-toString.txt")
+          val fos = new PrintWriter("CGDP-dependency-data.txt")
           fos.write(dm.toString)
           fos.close
         }
@@ -799,8 +799,10 @@ object Main extends App {
     else if(args.contains("test")) {
       val utils = new CGDP
       
-      val file_lines = scala.io.Source.fromFile("tagger-toString.txt").getLines
+      val file_lines = scala.io.Source.fromFile("CGDP-tagger-data.txt").getLines
       val tagger = Tagger.load(file_lines)
+      
+      // TODO : Load in the dependeny thing too, and display results
       
       val txt="Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29 ."
       val s = utils.sentence(txt)
