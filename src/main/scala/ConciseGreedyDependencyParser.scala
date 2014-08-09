@@ -392,7 +392,7 @@ class DependencyMaker(tagger:Tagger) {
   
   case class DefaultList(list:List[Int], default:Int=0) { 
     def apply(idx: Int): Int = if(idx>=0 || idx<list.length) list(idx) else {
-      println(s"Hit Default in DefaultList idx = ${idx}")
+      throw new Exception(s"Hit Default in DefaultList idx = ${idx}")          
       default
     }
     def ::(a: Int) = DefaultList(a::list, default)
@@ -402,6 +402,8 @@ class DependencyMaker(tagger:Tagger) {
   case class ParseState(n:Int, heads:Vector[Int], lefts:Vector[DefaultList], rights:Vector[DefaultList]) { // NB: Insert at start, not at end...
       // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
       def add(head:Int, child:Int) = {
+        println(s"ParseState.add(child=$child, head=$head)")
+        //println(s"ParseState :: ${this}")
         if(child<head) {
           ParseState(n, heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
         } 
@@ -412,7 +414,7 @@ class DependencyMaker(tagger:Tagger) {
   }
   def ParseStateInit(n:Int) = {
     // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
-    val heads = Vector[Int](n) // This is used for 'n' elsewhere
+    val heads = Vector.fill(n)(0:Int) // i.e. (0, .., n-1)
     
     // Each possible head (including ROOT) has a (lefts) and (rights) list, initially none
     // Entries (0, ..., n-1) are words, (n) is the 'ROOT'  ('to' is INCLUSIVE)
@@ -467,51 +469,55 @@ class DependencyMaker(tagger:Tagger) {
         Set(LEFT) // This move is a must, since the gold_heads tell us to do it
       }
       else {
-        // HMM  : Actually, it looks like this logic (from Python) can be flipped over : 
-        //        by constructing a 'val non_gold' and return 'valid - non_gold'
-        val all_moves = Set(SHIFT, RIGHT, LEFT)
-        var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
-        println(s" costly moves : ${costly}")
-        
-        // If the word second in the stack is its gold head, Left is incorrect
-        if( stack.length >= 2 && gold_heads(stack.head) == stack.tail.head ) {
-          costly += (LEFT)
+        val python_logic = {
+          // HMM  : Actually, it looks like this logic (from Python) can be flipped over : 
+          //        by constructing a 'val non_gold' and return 'valid - non_gold'
+          val all_moves = Set(SHIFT, RIGHT, LEFT)
+          var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
+          println(s" costly moves : ${costly}")
+          
+          // If the word second in the stack is its gold head, Left is incorrect
+          if( stack.length >= 2 && gold_heads(stack.head) == stack.tail.head ) {
+            costly += (LEFT)
+          }
+          
+          // If there are any dependencies between i and the stack, pushing i will lose them.
+          if( deps_between(i, stack) ) {  // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
+            costly += (SHIFT)
+          }
+          
+          // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
+          if( deps_between(stack.head, ((i+1) until (parse.n-1)).toList) ) { // UNTIL is EXCLUSIVE of top
+            costly += (LEFT)
+            costly += (RIGHT)
+          }
+          println(s" costly moves finally : ${costly}")
+          
+          (all_moves -- costly)
+        }
+        val new_logic = {
+          // If the word second in the stack is its gold head, Left is incorrect
+          val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
+          
+          // If there are any dependencies between i and the stack, pushing i will lose them.
+          val dont_push_i    = deps_between(i, stack) // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
+          
+          // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
+          val dont_pop_stack = deps_between(stack.head, (i+1 until parse.n-1).toList) // UNTIL is EXCLUSIVE of top
+          
+          val non_gold = List[Move](
+            if( left_incorrect )  LEFT  else INVALID,
+            if( dont_push_i )     SHIFT else INVALID,
+            if( dont_pop_stack )  LEFT  else INVALID,
+            if( dont_pop_stack )  RIGHT else INVALID
+          ).toSet
+          (valid -- non_gold)
+        }
+        if( new_logic != python_logic ) { // Test the two different approaches for equality
+          throw new Exception(s"Gold Move Logic differs : $new_logic != $python_logic")          
         }
         
-        // If there are any dependencies between i and the stack, pushing i will lose them.
-        if( deps_between(i, stack) ) {  // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
-          costly += (SHIFT)
-        }
-        
-        // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-        if( deps_between(stack.head, ((i+1) until (parse.n-1)).toList) ) { // UNTIL is EXCLUSIVE of top
-          costly += (LEFT)
-          costly += (RIGHT)
-        }
-        println(s" costly moves finally : ${costly}")
-        
-        (all_moves -- costly)
-
-/*        
-        // TODO : Test the two different approaches for equality
-        
-        // If the word second in the stack is its gold head, Left is incorrect
-        val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
-        
-        // If there are any dependencies between i and the stack, pushing i will lose them.
-        val dont_push_i    = deps_between(i, stack) // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
-        
-        // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-        val dont_pop_stack = deps_between(stack.head, (i+1 until parse.n-1).toList) // UNTIL is EXCLUSIVE of top
-        
-        val non_gold = List[Move](
-          if( left_incorrect )  LEFT  else INVALID,
-          if( dont_push_i )     SHIFT else INVALID,
-          if( dont_pop_stack )  LEFT  else INVALID,
-          if( dont_pop_stack )  RIGHT else INVALID
-        ).toSet
-        (valid -- non_gold)
-*/        
+        python_logic
       }
     }
     
@@ -655,7 +661,7 @@ class DependencyMaker(tagger:Tagger) {
       val valid_moves = state.valid_moves
       if(state.parse_complete) {
         if(valid_moves.size > 0) {          // Is this exactly the same as having no valid moves?
-          println("Valid Moves left where parse_complete")
+          throw new Exception("Valid Moves left where parse_complete")          
         }
         state // This the answer!
       }
@@ -673,7 +679,7 @@ class DependencyMaker(tagger:Tagger) {
           //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
           val gold_moves = state.get_gold_moves(gold_heads)
           if(gold_moves.size == 0) {
-            println("No Gold Moves!")
+            throw new Exception("No Gold Moves!")          
           }
           val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
           perceptron.update(best, guess, features.keys)
@@ -814,10 +820,10 @@ object Main extends App {
         val dm = new DependencyMaker(tagger)
         
         //benchmark( Unit=>{ dm.train(training_sentences) }, 10) // Overall efficiency - not dramatic
-        //dm.train(training_sentences)
+        dm.train(training_sentences)
         
         val s = training_sentences(0)
-        dm.train_one(s)
+        //dm.train_one(s)
 /*
         //benchmark( Unit=>{ dm.train_one(s) }, 50) // Mainly 'score'
         println(s"""Text = ${s.map(_.raw).mkString(" ")}""")
