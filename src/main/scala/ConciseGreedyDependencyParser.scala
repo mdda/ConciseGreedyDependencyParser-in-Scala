@@ -705,15 +705,12 @@ class CGDP {
     s3.split("""\s+""").map( word => WordData(word) ).toList
   }
 
-
 /* 
-
 def train_both(parser, sentences, nr_iter):
     parser.tagger.start_training(sentences)
     for itn in range(nr_iter):
         corr = 0; total = 0
         random.shuffle(sentences)
-        #for words, gold_tags, gold_parse, gold_label in sentences:
         for words, gold_tags, gold_parse in sentences:
             corr += parser.train_one(itn, words, gold_tags, gold_parse)
             if itn < 5:
@@ -724,11 +721,9 @@ def train_both(parser, sentences, nr_iter):
             parser.tagger.model.average_weights()
     print 'Averaging weights'
     parser.model.average_weights()
-
 */  
 
 }
-
 
 
 object Main extends App {
