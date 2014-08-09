@@ -647,6 +647,13 @@ class DependencyMaker(tagger:Tagger) {
 
     // This annotates the list of words so that parse.heads is its best guess when it finishes
     val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
+    
+    if(true) {
+      val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
+      val correct_pct = correct*100.0 / gold_heads.length
+      val correct_stars = "*" * (correct_pct/2).toInt
+      println(f"Dependency score = ${correct_pct}%6.1f%% :: $correct_stars")
+    }
    
     final_state.parse.heads.toList
   }
@@ -778,6 +785,8 @@ object Main extends App {
         //benchmark( Unit=>{ dm.train(training_sentences) }, 10) // Overall efficiency - not dramatic
 
         // TODO : Look at performance over each iteration...
+        dm.train(training_sentences)
+        dm.train(training_sentences)
         dm.train(training_sentences)
         
         val s = training_sentences(0)
