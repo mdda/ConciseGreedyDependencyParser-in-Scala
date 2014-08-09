@@ -440,8 +440,8 @@ class DependencyMaker(tagger:Tagger) {
       if(stack.length>=1)  LEFT  else INVALID
     ).filterNot( _ == INVALID).toSet
     
-    // This may be equivalent to there being no valid_moves
-    def parse_complete = !(stack.length>0 || i<(parse.n-1)) // i.e. we've at (or beyond) the last word, and have no stack left
+    // This is equivalent to there being no valid_moves - so just test valid_moves.isEmpty
+    //def parse_complete = !(stack.length>0 || i<(parse.n-1)) // i.e. we've at (or beyond) the last word, and have no stack left
 
     def get_gold_moves(gold_heads:Vector[Int]) = {
       def deps_between(target:Int, others:List[Int]) = {
@@ -619,13 +619,7 @@ class DependencyMaker(tagger:Tagger) {
     
     def move_through_sentence_from(state: CurrentState): CurrentState = {
       val valid_moves = state.valid_moves
-      if(valid_moves.isEmpty && !state.parse_complete) {
-        throw new Exception("No Valid Moves, but not parse_complete")          
-      }
-      if(!valid_moves.isEmpty && state.parse_complete) {
-        throw new Exception("Valid Moves left where parse_complete")          
-      }
-      if(state.parse_complete) {
+      if(valid_moves.isEmpty) {
         state // This the answer!
       }
       else {
