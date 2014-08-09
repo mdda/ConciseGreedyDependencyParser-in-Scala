@@ -445,6 +445,7 @@ class DependencyMaker(tagger:Tagger) {
       def deps_between(target:Int, others:List[Int]) = {
         others.exists( word => (gold_heads(word)==target || gold_heads(target) == word))
       }
+      
       val valid = valid_moves
       if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head)) {
         Set(SHIFT)
@@ -453,8 +454,9 @@ class DependencyMaker(tagger:Tagger) {
         Set(LEFT)
       }
       else {
-        // TODO : Actually, it looks like this logic can be flipped over : 
-        //        construct a 'val non_gold' and return 'valid - non_gold'
+        /*
+        // HMM  : Actually, it looks like this logic (from Python) can be flipped over : 
+        //        by constructing a 'val non_gold' and return 'valid - non_gold'
         val all_moves = Set(SHIFT, RIGHT, LEFT)
         var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
         
@@ -475,6 +477,26 @@ class DependencyMaker(tagger:Tagger) {
         }
         
         (all_moves -- costly)
+        */
+        
+        // TODO : Test the two different approaches for equality
+        
+        // If the word second in the stack is its gold head, Left is incorrect
+        val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
+        
+        // If there are any dependencies between i and the stack, pushing i will lose them.
+        val dont_push_i    = deps_between(i, stack) // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
+        
+        // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
+        val dont_pop_stack = deps_between(stack.head, (i+1 until parse.n-1).toList) // UNTIL is EXCLUSIVE of top
+        
+        val non_gold = List[Move](
+          if( left_incorrect )  LEFT  else INVALID,
+          if( dont_push_i )     SHIFT else INVALID,
+          if( dont_pop_stack )  LEFT  else INVALID,
+          if( dont_pop_stack )  RIGHT else INVALID
+        ).toSet
+        (valid -- non_gold)
       }
     }
 /*    
