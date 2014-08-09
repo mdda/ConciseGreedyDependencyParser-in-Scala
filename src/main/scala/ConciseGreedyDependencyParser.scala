@@ -390,18 +390,19 @@ class DependencyMaker(tagger:Tagger) {
   val perceptron = new Perceptron(move_names.length)
 
   case class ParseState(n:Int, heads:Vector[Int], lefts:Vector[List[Int]], rights:Vector[List[Int]]) { // NB: Insert at start, not at end...
-      // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
-      def add(head:Int, child:Int) = {
-        //println(s"ParseState.add(child=$child, head=$head)")
-        //println(s"ParseState :: ${this}")
-        if(child<head) {
-          ParseState(n, heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
-        } 
-        else {
-          ParseState(n, heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
-        }
+    // This makes the word at 'child' point to head and adds the child to the appropriate left/right list of head
+    def add(head:Int, child:Int) = {
+      //println(s"ParseState.add(child=$child, head=$head)")
+      //println(s"ParseState :: ${this}")
+      if(child<head) {
+        ParseState(n, heads.updated(child, head), lefts.updated(head, child :: lefts(head)), rights)
+      } 
+      else {
+        ParseState(n, heads.updated(child, head), lefts, rights.updated(head, child :: rights(head)))
       }
+    }
   }
+  
   def ParseStateInit(n:Int) = {
     // heads are the dependencies for each word in the sentence, except the last one (the ROOT)
     val heads = Vector.fill(n)(0:Int) // i.e. (0, .., n-1)
@@ -530,18 +531,17 @@ class DependencyMaker(tagger:Tagger) {
       val (wn0, wn1, wn2) = get_buffer_context(words)
       val (tn0, tn1, tn2) = get_buffer_context(tags)
     
-      val (vn0b, wn0b1, wn0b2) = get_parse_context(n0, parse.lefts, words)
-      val (_   , tn0b1, tn0b2) = get_parse_context(n0, parse.lefts, tags)
+      val (vn0b, wn0b1, wn0b2) = get_parse_context(n0, parse.lefts,  words)
+      val (_   , tn0b1, tn0b2) = get_parse_context(n0, parse.lefts,  tags)
 
       val (vn0f, wn0f1, wn0f2) = get_parse_context(n0, parse.rights, words)
       val (_,    tn0f1, tn0f2) = get_parse_context(n0, parse.rights, tags)
       
-      val (vs0b, ws0b1, ws0b2) = get_parse_context(s0, parse.lefts, words)
-      val (_,    ts0b1, ts0b2) = get_parse_context(s0, parse.lefts, tags)
+      val (vs0b, ws0b1, ws0b2) = get_parse_context(s0, parse.lefts,  words)
+      val (_,    ts0b1, ts0b2) = get_parse_context(s0, parse.lefts,  tags)
     
       val (vs0f, ws0f1, ws0f2) = get_parse_context(s0, parse.rights, words)
       val (_,    ts0f1, ts0f2) = get_parse_context(s0, parse.rights, tags)
-      
           
       //  String-distance :: Cap numeric features at 5? (NB: n0 always > s0, by construction)
       val dist = if(s0 >= 0) math.min(n0 - s0, 5) else 0  // WAS :: ds0n0
@@ -596,8 +596,7 @@ class DependencyMaker(tagger:Tagger) {
       // All weights on this set of features are ==1
       feature_set.map( f => (f, 1:Score) ).toMap
     }
-/*    
-*/    
+
   }
   
   // TODO : Shuffle sentences, based on seed :: http://stackoverflow.com/questions/11040399/scala-listbuffer-or-equivalent-shuffle
@@ -620,10 +619,13 @@ class DependencyMaker(tagger:Tagger) {
     
     def move_through_sentence_from(state: CurrentState): CurrentState = {
       val valid_moves = state.valid_moves
+      if(valid_moves.isEmpty && !state.parse_complete) {
+        throw new Exception("No Valid Moves, but not parse_complete")          
+      }
+      if(!valid_moves.isEmpty && state.parse_complete) {
+        throw new Exception("Valid Moves left where parse_complete")          
+      }
       if(state.parse_complete) {
-        if(valid_moves.size > 0) {          // Is this exactly the same as having no valid moves?
-          throw new Exception("Valid Moves left where parse_complete")          
-        }
         state // This the answer!
       }
       else {
