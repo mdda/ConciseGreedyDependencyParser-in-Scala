@@ -644,9 +644,7 @@ class DependencyMaker(tagger:Tagger) {
       }
       else {
         println(s"  i/n=$state.i/$state.parse.n stack=$state.stack")
-        
         val features = state.extract_features(words, tags)
-        //val features = Map[Feature, Score]()  // TODO !! 
 
         // This will produce scores for features that aren't valid too
         val score = perceptron.score(features, if(train) perceptron.current else perceptron.average)
@@ -675,31 +673,6 @@ class DependencyMaker(tagger:Tagger) {
 
 /*
 */
-
-/*
-
-*/
-
-/* 
-
-def train_both(parser, sentences, nr_iter):
-    parser.tagger.start_training(sentences)
-    for itn in range(nr_iter):
-        corr = 0; total = 0
-        random.shuffle(sentences)
-        #for words, gold_tags, gold_parse, gold_label in sentences:
-        for words, gold_tags, gold_parse in sentences:
-            corr += parser.train_one(itn, words, gold_tags, gold_parse)
-            if itn < 5:
-                parser.tagger.train_one(words, gold_tags)
-            total += len(words)
-        print itn, '%.3f' % (float(corr) / float(total))
-        if itn == 4:  ## Why now?
-            parser.tagger.model.average_weights()
-    print 'Averaging weights'
-    parser.model.average_weights()
-
-*/  
 
 
 class CGDP {
@@ -739,6 +712,29 @@ class CGDP {
     // case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1))
     s3.split("""\s+""").map( word => WordData(word) ).toList
   }
+
+
+/* 
+
+def train_both(parser, sentences, nr_iter):
+    parser.tagger.start_training(sentences)
+    for itn in range(nr_iter):
+        corr = 0; total = 0
+        random.shuffle(sentences)
+        #for words, gold_tags, gold_parse, gold_label in sentences:
+        for words, gold_tags, gold_parse in sentences:
+            corr += parser.train_one(itn, words, gold_tags, gold_parse)
+            if itn < 5:
+                parser.tagger.train_one(words, gold_tags)
+            total += len(words)
+        print itn, '%.3f' % (float(corr) / float(total))
+        if itn == 4:  ## Why now?
+            parser.tagger.model.average_weights()
+    print 'Averaging weights'
+    parser.model.average_weights()
+
+*/  
+
 }
 
 
