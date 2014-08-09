@@ -626,7 +626,8 @@ class DependencyMaker(tagger:Tagger) {
 /*    
 */    
   }
-    
+  
+  // TODO : Shuffle sentences, based on seed :: http://stackoverflow.com/questions/11040399/scala-listbuffer-or-equivalent-shuffle
   def train(sentences:List[Sentence]):Unit = sentences.foreach( train_one )
   
   def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
@@ -820,7 +821,6 @@ object Main extends App {
       }
       
     }
-    
     else if(args.contains("test")) {
       val utils = new CGDP
       
