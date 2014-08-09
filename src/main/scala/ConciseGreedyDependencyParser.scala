@@ -456,18 +456,22 @@ class DependencyMaker(tagger:Tagger) {
       }
       
       val valid = valid_moves
+      println(s"valid moves = ${valid}")
+      
       if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head)) {
-        Set(SHIFT)
+        println(" gold move shortcut : SHIFT")
+        Set(SHIFT) // First condition obvious, second rather weird
       }
       else if( gold_heads(stack.head) == i ) {
-        Set(LEFT)
+        println(" gold move shortcut : LEFT")
+        Set(LEFT) // This move is a must, since the gold_heads tell us to do it
       }
       else {
-        /*
         // HMM  : Actually, it looks like this logic (from Python) can be flipped over : 
         //        by constructing a 'val non_gold' and return 'valid - non_gold'
         val all_moves = Set(SHIFT, RIGHT, LEFT)
         var costly = all_moves -- valid  // i.e. all invalid moves are 'costly'
+        println(s" costly moves : ${costly}")
         
         // If the word second in the stack is its gold head, Left is incorrect
         if( stack.length >= 2 && gold_heads(stack.head) == stack.tail.head ) {
@@ -480,14 +484,15 @@ class DependencyMaker(tagger:Tagger) {
         }
         
         // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-        if( deps_between(stack.head, (i+1 until parse.n-1).toList) ) { // UNTIL is EXCLUSIVE of top
+        if( deps_between(stack.head, ((i+1) until (parse.n-1)).toList) ) { // UNTIL is EXCLUSIVE of top
           costly += (LEFT)
           costly += (RIGHT)
         }
+        println(s" costly moves finally : ${costly}")
         
         (all_moves -- costly)
-        */
-        
+
+/*        
         // TODO : Test the two different approaches for equality
         
         // If the word second in the stack is its gold head, Left is incorrect
@@ -506,6 +511,7 @@ class DependencyMaker(tagger:Tagger) {
           if( dont_pop_stack )  RIGHT else INVALID
         ).toSet
         (valid -- non_gold)
+*/        
       }
     }
     
@@ -704,7 +710,9 @@ class CGDP {
         val body  = lines.map( l => {                            //;println(s"Line = ${l}")
           val arr = l.split("\\s+")
           val (raw, pos, dep) = (arr(0), arr(1), arr(2).toInt)
-          val dep_ex = if(dep==0) (lines.length+1) else dep
+          // CONLL dependency layout assumes [root, word1, word2, ..., wordn]  (where n == lines.length)
+          // our   dependency layout assumes [word0, word1, ..., word(n-1)] { root }
+          val dep_ex = if(dep==0) (lines.length+1-1) else (dep-1)    // This differs from Python version by the (-1)
           WordData(raw, pos, dep_ex)
         })
         //WordData("%START%", "%START%") :: WordData("%PAD%", "%PAD%") :: ( body :+ WordData("%ROOT%", "%ROOT%") :+ WordData("%END%", "%END%") )
