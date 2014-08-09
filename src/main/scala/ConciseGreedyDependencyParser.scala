@@ -343,7 +343,7 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
     //val context:List[Word] = ("%START%" :: "%PAD%" :: (sentence.map( _.norm ) :+ "%ROOT%" :+ "%END%"))
     val words_norm = sentence.map( _.norm )
     val words:List[Word] = (List("%START%","%PAD%") ::: words_norm ::: List("%ROOT%","%END%"))
-    val truth:List[ClassNum] = if(train) (List(-1,-1) ::: sentence.map( wd => getClassNum(wd.pos) ) ::: List(-1,-1)) else Nil
+    val gold_tags:List[ClassNum] = if(train) (List(-1,-1) ::: sentence.map( wd => getClassNum(wd.pos) ) ::: List(-1,-1)) else Nil
 
     val (i_final, all_tags) =
     words_norm.foldLeft( (2:Int, List[ClassName]("%START%","%PAD%")) ) { case ( (i, tags), word_norm ) => { 
@@ -353,8 +353,8 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
         val guessed = perceptron.predict( score )
         
         if(train) {// Update the perceptron
-          //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
-          perceptron.update( truth(i), guessed, features.keys)
+          //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(gold_tags(i))}%4s :: ")
+          perceptron.update( gold_tags(i), guessed, features.keys)
         }
         guessed // Use the guessed value for next prediction/learning step (rather than the truth...)
       }) 
@@ -388,6 +388,7 @@ class DependencyMaker(tagger:Tagger) {
       default
     }
     def ::(a: Int) = DefaultList(a::list, default)
+    def length = list.length
   }
 
   case class ParseState(n:Int, heads:Vector[Int], lefts:Vector[DefaultList], rights:Vector[DefaultList]) { // NB: Insert at start, not at end...
@@ -499,134 +500,58 @@ class DependencyMaker(tagger:Tagger) {
         (valid -- non_gold)
       }
     }
-/*    
-def get_gold_moves(n0, n, stack, heads, gold):
-
-    valid = get_valid_moves(n0, n, len(stack))
-    if not stack or (SHIFT in valid and gold[n0] == stack[-1]):
-        return [SHIFT]
-    if gold[stack[-1]] == n0:
-        return [LEFT]
-        
-    costly = set([m for m in MOVES if m not in valid])
-    #print "Costly = ", costly
     
-    # If the word behind s0 is its gold head, Left is incorrect
-    if len(stack) >= 2 and gold[stack[-1]] == stack[-2]:
-        costly.add(LEFT)
-        
-    # If there are any dependencies between n0 and the stack,
-    # pushing n0 will lose them.
-    if SHIFT not in costly and deps_between(n0, stack, gold):
-        costly.add(SHIFT)
-        
-    # If there are any dependencies between s0 and the buffer, popping
-    # s0 will lose them.
-    if deps_between(stack[-1], range(n0+1, n-1), gold):
-        costly.add(LEFT)
-        costly.add(RIGHT)
-        
-    return [m for m in MOVES if m not in costly]
-*/    
-  }
-    
-  def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
-  def parse(sentence:Sentence):List[Int] = process(sentence, false)
-    
-  def process(sentence:Sentence, train:Boolean):List[Int] = {
-    //print "train_one(%d, n=%d, %s)" % (itn, n, words, )
-    //print " gold_heads = %s" % (gold_heads, )
-    
-    // NB: Our structure just has a 'pure' list of sentences.  The root will point to (n)
-    // Previously it was assumed that the sentence has 1 entry pre-pended, and the stack starts at {1}
-    val tags = tagger.tag(sentence)
-  
-    def move_through_sentence_from(state: CurrentState): CurrentState = {
-      val valid_moves = state.valid_moves
-      if(state.parse_complete) {
-        if(valid_moves.size > 0) {          // Is this exactly the same as having no valid moves?
-          println("Valid Moves left where parse_complete")
+    def extract_features(words:Vector[Word], tags:Vector[ClassName]):Map[Feature,Score] = {
+      val feature_set = mutable.Set[Feature]() 
+      //feature_set += Feature("w suffix",   word(i).takeRight(3))  
+      
+      def get_stack_context[T<:String](data:Vector[T]):(T,T,T) = ( // Applies to both Word and ClassName (depth is implict from stack length)
+        // NB: Always expecting 3 entries back...
+        if(stack.length>0) data(stack(0)) else "".asInstanceOf[T],
+        if(stack.length>1) data(stack(1)) else "".asInstanceOf[T],
+        if(stack.length>2) data(stack(2)) else "".asInstanceOf[T]
+      )
+      
+      def get_buffer_context[T<:String](data:Vector[T]):(T,T,T) = ( // Applies to both Word and ClassName (depth is implict from stack length)
+        // NB: Always expecting 3 entries back...
+        if(i+0 < parse.n) data(i+0) else "".asInstanceOf[T],
+        if(i+1 < parse.n) data(i+1) else "".asInstanceOf[T],
+        if(i+2 < parse.n) data(i+2) else "".asInstanceOf[T]
+      )
+      
+      def get_parse_context[T<:String](idx:Int, deps:Vector[DefaultList], data:Vector[T]):(Int,T,T) = { // Applies to both Word and ClassName (depth is implict from stack length)
+        if(idx<0) { // For the cases of empty stack
+          (0, "".asInstanceOf[T], "".asInstanceOf[T]) 
         }
-        state // This the answer!
-      }
-      else {
-        println(s"  i/n=$state.i/$state.parse.n stack=$state.stack")
-        
-        //val features = extract_features(words, tags, state)
-        val features = Map[Feature, Score]()  // TODO !! 
-
-        // This will produce scores for features that aren't valid too
-        val score = perceptron.score(features, if(train) perceptron.current else perceptron.average)
-        
-        // Sort valid_moves scores into descending order, and pick the best move
-        val guess = valid_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
-        
-        if(train) {  // Update the perceptron
-          //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
-          
-          //val gold_moves = get_gold_moves(i, n, stack, parse.heads, gold_heads)
-          val gold_moves = Set[Move]() // TODO !! 
-          val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
-          perceptron.update(best, guess, features.keys)
+        else {
+          val dependencies = deps(idx) // Find the list of dependencies at this index
+          val valency = dependencies.length
+          // return the tuple here :
+          ( valency, 
+            if(valency > 0) data(dependencies(0)) else "".asInstanceOf[T],
+            if(valency > 1) data(dependencies(1)) else "".asInstanceOf[T]
+          )
         }
-        
-        move_through_sentence_from( state.transition(guess) ) 
       }
+
+      // Set up the context pieces --- the word (W) and tag (T) of:
+      //   S0-2: Top three words on the stack
+      //   N0-2: First three words of the buffer
+      //   n0b1, n0b2: Two leftmost children of the first word of the buffer
+      //   s0b1, s0b2: Two leftmost children of the top word of the stack
+      //   s0f1, s0f2: Two rightmost children of the top word of the stack
+
+      val s0 = if(stack.isEmpty) -1 else stack.head
+
+      val (ws0, ws1, ws2) = get_stack_context(words)
+      val (ts0, ts1, ts2) = get_stack_context(tags)
+
+
+      // All weights on this set of features are ==1
+      feature_set.map( f => (f, 1:Score) ).toMap
     }
-
-    // This annotates the list of words so that parse.heads is its best guess when it finishes
-    val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
-   
-    final_state.parse.heads.toList
-  }
-
-}
-
-/*
-*/
-
-/*
+/*    
 def extract_features(words, tags, n0, n, stack, parse):
-    def get_stack_context(depth, stack, data):
-        if depth >= 3:
-            return data[stack[-1]], data[stack[-2]], data[stack[-3]]
-        elif depth >= 2:
-            return data[stack[-1]], data[stack[-2]], ''
-        elif depth == 1:
-            return data[stack[-1]], '', ''
-        else:
-            return '', '', ''
-
-    def get_buffer_context(i, n, data):
-        if i + 1 >= n:
-            return data[i], '', ''
-        elif i + 2 >= n:
-            return data[i], data[i + 1], ''
-        else:
-            return data[i], data[i + 1], data[i + 2]
-
-    def get_parse_context(word, deps, data):
-        if word == -1:
-            return 0, '', ''
-        deps = deps[word]
-        valency = len(deps)
-        if not valency: // i.e. valency==0
-            return 0, '', ''
-        elif valency == 1:
-            return 1, data[deps[-1]], ''
-        else:
-            return valency, data[deps[-1]], data[deps[-2]]
-
-    features = {}
-    # Set up the context pieces --- the word (W) and tag (T) of:
-    # S0-2: Top three words on the stack
-    # N0-2: First three words of the buffer
-    # n0b1, n0b2: Two leftmost children of the first word of the buffer
-    # s0b1, s0b2: Two leftmost children of the top word of the stack
-    # s0f1, s0f2: Two rightmost children of the top word of the stack
-
-    depth = len(stack)
-    s0 = stack[-1] if depth else -1
 
     Ws0, Ws1, Ws2 = get_stack_context(depth, stack, words)
     Ts0, Ts1, Ts2 = get_stack_context(depth, stack, tags)
@@ -692,6 +617,67 @@ def extract_features(words, tags, n0, n, stack, parse):
         if w_t or v_d:
             features['val/d-%d %s %d' % (i, w_t, v_d)] = 1
     return features
+*/    
+  }
+    
+  def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
+  def parse(sentence:Sentence):List[Int] = process(sentence, false)
+    
+  def process(sentence:Sentence, train:Boolean):List[Int] = {
+    // NB: Our structure just has a 'pure' list of sentences.  The root will point to (n)
+    // Previously it was assumed that the sentence has 1 entry pre-pended, and the stack starts at {1}
+    
+    // These should be Vectors, since we're going to be accessing them at random (not sequentially)
+    val words      = sentence.map( _.norm ).toVector
+    val tags       = tagger.tag(sentence).toVector
+    val gold_heads = sentence.map( _.dep ).toVector
+  
+    //print "train_one(n=%d, %s)" % (n, words, )
+    //print " gold_heads = %s" % (gold_heads, )
+    
+    def move_through_sentence_from(state: CurrentState): CurrentState = {
+      val valid_moves = state.valid_moves
+      if(state.parse_complete) {
+        if(valid_moves.size > 0) {          // Is this exactly the same as having no valid moves?
+          println("Valid Moves left where parse_complete")
+        }
+        state // This the answer!
+      }
+      else {
+        println(s"  i/n=$state.i/$state.parse.n stack=$state.stack")
+        
+        val features = state.extract_features(words, tags)
+        //val features = Map[Feature, Score]()  // TODO !! 
+
+        // This will produce scores for features that aren't valid too
+        val score = perceptron.score(features, if(train) perceptron.current else perceptron.average)
+        
+        // Sort valid_moves scores into descending order, and pick the best move
+        val guess = valid_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
+        
+        if(train) {  // Update the perceptron
+          //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
+          val gold_moves = state.get_gold_moves(gold_heads)
+          val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
+          perceptron.update(best, guess, features.keys)
+        }
+        
+        move_through_sentence_from( state.transition(guess) ) 
+      }
+    }
+
+    // This annotates the list of words so that parse.heads is its best guess when it finishes
+    val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
+   
+    final_state.parse.heads.toList
+  }
+
+}
+
+/*
+*/
+
+/*
 
 */
 
