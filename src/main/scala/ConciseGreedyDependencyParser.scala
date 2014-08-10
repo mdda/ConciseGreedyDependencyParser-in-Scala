@@ -442,7 +442,6 @@ class DependencyMaker(tagger:Tagger) {
 
     -- By construction, stack is always stored in increasing order [ a,c,f,g ] i
        So "I(head)-g" is a left dangling branch, and "F(head)-g" is right dangling one
-    
 */
   
   case class CurrentState(i:Int, stack:List[Int], parse:ParseState) {
@@ -622,7 +621,6 @@ class DependencyMaker(tagger:Tagger) {
 
   }
   
-  // TODO : Shuffle sentences, based on seed :: http://stackoverflow.com/questions/11040399/scala-listbuffer-or-equivalent-shuffle
   def train(sentences:List[Sentence], seed:Int):Float = {
     val rand = new util.Random(seed)
     rand.shuffle(sentences).map( s=>train_one(s) ).sum / sentences.length
@@ -727,9 +725,6 @@ class DependencyMaker(tagger:Tagger) {
   
 }
 
-/*
-*/
-
 class CGDP {
   def read_CONLL(path:String): List[Sentence] = {
     println(s"read_CONLL(${path})")
@@ -768,24 +763,6 @@ class CGDP {
     
     s3.split("""\s+""").map( word => WordData(word) ).toList
   }
-
-/* 
-def train_both(parser, sentences, nr_iter):
-    parser.tagger.start_training(sentences)
-    for itn in range(nr_iter):
-        corr = 0; total = 0
-        random.shuffle(sentences)
-        for words, gold_tags, gold_parse in sentences:
-            corr += parser.train_one(itn, words, gold_tags, gold_parse)
-            if itn < 5:
-                parser.tagger.train_one(words, gold_tags)
-            total += len(words)
-        print itn, '%.3f' % (float(corr) / float(total))
-        if itn == 4:  ## Why now?
-            parser.tagger.model.average_weights()
-    print 'Averaging weights'
-    parser.model.average_weights()
-*/  
 
 }
 
@@ -846,7 +823,6 @@ object Main extends App {
         val dm = new DependencyMaker(tagger)
         //benchmark( Unit=>{ dm.train(training_sentences) }, 10) // Overall efficiency - not dramatic
 
-        // TODO : Look at performance over each iteration...
         val performance = 
           (0 until 15).map { i =>
             dm.train(training_sentences, i)
