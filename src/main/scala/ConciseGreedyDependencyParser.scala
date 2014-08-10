@@ -38,6 +38,13 @@ package object ConciseGreedyDependencyParserObj {
       else                                                raw.toLowerCase
     }
   }
+  
+  def pct_fit_fmt_str(correct_01:Float) = {
+    val correct_pct = correct_01*100
+    val correct_stars = (0 until 100).map(i => (if(i < correct_pct) "x" else "-")).mkString
+    f"${correct_pct}%6.1f%% :: $correct_stars"
+  }
+  
 }
 
 import ConciseGreedyDependencyParserObj._
@@ -334,8 +341,12 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
     feature_set.map( f => (f, 1:Score) ).toMap
   }
 
-  def train(sentences:List[Sentence]):Unit = sentences.foreach( train_one )
-  def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
+
+  def train(sentences:List[Sentence], seed:Int):Float = {
+    val rand = new util.Random(seed)
+    rand.shuffle(sentences).map( s=>train_one(s) ).sum / sentences.length
+  }
+  def train_one(sentence:Sentence):Float = goodness(sentence, process(sentence, true))
     
   def tag(sentence:Sentence):List[ClassName] = process(sentence, false)
     
@@ -361,6 +372,13 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
       (i+1, tags :+ classes(guess))
     }}
     all_tags.drop(2)
+  }
+
+  def goodness(sentence:Sentence, fit:List[ClassName]):Float = {
+    val gold = sentence.map( _.pos ).toVector
+    val correct = fit.zip( gold ).count( pair => (pair._1 == pair._2))  / gold.length.toFloat 
+    println(s"Part-of-Speech score : ${pct_fit_fmt_str(correct)}")
+    correct
   }
   
   override def toString():String = {
@@ -605,9 +623,12 @@ class DependencyMaker(tagger:Tagger) {
   }
   
   // TODO : Shuffle sentences, based on seed :: http://stackoverflow.com/questions/11040399/scala-listbuffer-or-equivalent-shuffle
-  def train(sentences:List[Sentence]):Unit = sentences.foreach( train_one )
+  def train(sentences:List[Sentence], seed:Int):Unit = {
+    val rand = new util.Random(seed)
+    rand.shuffle(sentences).foreach( train_one )
+  }
   
-  def train_one(sentence:Sentence):Unit = { process(sentence, true); () }
+  def train_one(sentence:Sentence):Float = goodness(sentence, process(sentence, true))
   def parse(sentence:Sentence):List[Int] = process(sentence, false)
     
   def process(sentence:Sentence, train:Boolean):List[Int] = {
@@ -653,15 +674,14 @@ class DependencyMaker(tagger:Tagger) {
     // This annotates the list of words so that parse.heads is its best guess when it finishes
     val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
     
-    if(true) {
-      val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
-      val correct_pct = correct*100.0 / gold_heads.length
-      val correct_stars = (0 until 100).map(i => (if(i*1 < correct_pct) "x" else "-")).mkString
-      
-      println(f"Dependency score = ${correct_pct}%6.1f%% :: $correct_stars")
-    }
-   
     final_state.parse.heads.toList
+  }
+
+  def goodness(sentence:Sentence, fit:List[Int]):Float = {
+    val gold = sentence.map( _.dep ).toVector
+    val correct = fit.zip( gold ).count( pair => (pair._1 == pair._2))  / gold.length.toFloat
+    println(s"Dependency score : ${pct_fit_fmt_str(correct)}")
+    correct
   }
 
   override def toString():String = {
@@ -687,7 +707,7 @@ class DependencyMaker(tagger:Tagger) {
         if(gold_moves.size > 1 ) { 
           println(s"*** *** *** *** *** *** Several Gold Moves at ${state.i}/${state.parse.n}! : ${moves_str(gold_moves)}") 
         }
-        val guess = gold_moves.toList.reverse.head
+        val guess = gold_moves.toList.head
         move_through_sentence_from( state.transition(guess) ) 
       }
     }
@@ -695,17 +715,14 @@ class DependencyMaker(tagger:Tagger) {
     // This annotates the list of words so that parse.heads is its best guess when it finishes
     val final_state = move_through_sentence_from( CurrentState(1, List(0), ParseStateInit(sentence.length)) )
     
-    val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
-    val correct_pct = correct*100.0 / gold_heads.length
-    val correct_stars = (0 until 100).map(i => (if(i*1 < correct_pct) "x" else "-")).mkString
+    val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))  / gold_heads.length
     println(s"""       index : ${(0 until gold_heads.length).map( v => f"${v}%2d" )}""")
     println(s"""Gold   Moves : ${gold_heads.map( v => f"${v}%2d" )}""")
     println(s""" Found Moves : ${final_state.parse.heads.map( v => f"${v}%2d" )}""")
-    println(f"Dependency GoldMoves correct = ${correct_pct}%6.1f%% :: $correct_stars")
+    println(f"Dependency GoldMoves correct = ${pct_fit_fmt_str(correct)}")
+    //println(s" words.length=${words.length}, tags.length=${tags.length}, gold_heads.length=${gold_heads.length}")
     
-    println(s" words.length=${words.length}, tags.length=${tags.length}, gold_heads.length=${gold_heads.length}")
-    
-    (correct_pct > 99)
+    (correct > 0.99)
   }
   
 }
@@ -801,8 +818,11 @@ object Main extends App {
         val tagger = new Tagger(classes, tag_dict)
         //benchmark( Unit=>{ tagger.train(training_sentences) }, 10) // Overall efficiency - not dramatic
 
-        // TODO : Look at performance over each iteration...
-        tagger.train(training_sentences)
+        val performance = 
+          (0 until 10).map { i =>
+            tagger.train(training_sentences, i)
+          }
+        println(s"Tagger Performance = ${performance}")
         
         val s = training_sentences(0)
         //benchmark( Unit=>{ tagger.train_one(s) }, 50) // Mainly 'score'
@@ -810,7 +830,7 @@ object Main extends App {
         println(s"original = ${s}")
         println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
         
-        if(args.contains("save") ) {
+        if(args.contains("save") || args.contains("both") ) { // Implicit save between stages here...
           //val fos = new FileOutputStream("tagger-toString.txt")
           val fos = new PrintWriter("CGDP-tagger-data.txt")
           fos.write(tagger.toString)
@@ -827,9 +847,11 @@ object Main extends App {
         //benchmark( Unit=>{ dm.train(training_sentences) }, 10) // Overall efficiency - not dramatic
 
         // TODO : Look at performance over each iteration...
-        dm.train(training_sentences)
-        dm.train(training_sentences)
-        dm.train(training_sentences)
+        val performance = 
+          (0 until 15).map { i =>
+            dm.train(training_sentences, i)
+          }
+        println(s"Dependency Performance = ${performance}")
         
         val s = training_sentences(0)
         //dm.train_one(s)
@@ -863,7 +885,7 @@ object Main extends App {
         val dm = DependencyMaker.load(file_lines, tagger)
         
         if(args.contains("gold")) {
-          (0 until 10).foreach { i =>
+          (0 until 20).foreach { i =>
             val s = training_sentences(i)
             dm.test_gold_moves(s)
           }
