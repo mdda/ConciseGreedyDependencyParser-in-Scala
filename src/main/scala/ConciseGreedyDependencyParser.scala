@@ -383,11 +383,11 @@ object DependencyMaker {
 
 class DependencyMaker(tagger:Tagger) {
   val SHIFT:Move=0; val RIGHT:Move=1; val LEFT:Move=2; val INVALID:Move=(-1)
-  def moves_str(s:Set[Int]) = { 
+  def moves_str(s:Set[Move]) = { 
     val move_names = Vector[ClassName]("INVALID", "SHIFT", "RIGHT", "LEFT") // NB: requires a +1
-    s.toList.sorted.map( i => move_names(i+1) ).mkString(" ")
+    s.toList.sorted.map( i => move_names(i+1) ).mkString(", ", "{", "}")
   }
-  println(s"DependencyMaker.Classes = [${move_str(Set(SHIFT, LEFT, RIGHT))}]")
+  println(s"DependencyMaker.Classes = ${moves_str(Set(SHIFT, LEFT, RIGHT))}")
   
   val perceptron = new Perceptron(3)
 
@@ -655,7 +655,7 @@ class DependencyMaker(tagger:Tagger) {
     if(true) {
       val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
       val correct_pct = correct*100.0 / gold_heads.length
-      val correct_stars = (0 until 50).map(i => if(i*2 < correct_pct) "*" else "-").mkString
+      val correct_stars = (0 until 50).map(i => if(i*1 < correct_pct) "*" else "-").mkString
       
       println(f"Dependency score = ${correct_pct}%6.1f%% :: $correct_stars")
     }
@@ -684,7 +684,7 @@ class DependencyMaker(tagger:Tagger) {
           throw new Exception("No Gold Moves!") 
         }
         if(gold_moves.size > 1 ) { 
-          println(s"Several Gold Moves! : [$gold_moves] : Actual=${gold_heads(state.i)}") 
+          println(s"*** Several Gold Moves! : [$gold_moves] : Actual=${gold_heads(state.i)}") 
         }
         val guess = gold_moves.toList.head
         move_through_sentence_from( state.transition(guess) ) 
@@ -696,8 +696,7 @@ class DependencyMaker(tagger:Tagger) {
     
     val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
     val correct_pct = correct*100.0 / gold_heads.length
-    val correct_stars = (0 until 50).map(i => if(i*2 < correct_pct) "*" else "-").mkString
-    
+    val correct_stars = (0 until 50).map(i => if(i*1 < correct_pct) "*" else "-").mkString
     println(f"Dependency GoldMoves correct = ${correct_pct}%6.1f%% :: $correct_stars")
     
     (correct_pct > 99)
