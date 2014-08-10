@@ -385,7 +385,7 @@ class DependencyMaker(tagger:Tagger) {
   val SHIFT:Move=0; val RIGHT:Move=1; val LEFT:Move=2; val INVALID:Move=(-1)
   def moves_str(s:Set[Move]) = { 
     val move_names = Vector[ClassName]("INVALID", "SHIFT", "RIGHT", "LEFT") // NB: requires a +1
-    s.toList.sorted.map( i => move_names(i+1) ).mkString(", ", "{", "}")
+    s.toList.sorted.map( i => move_names(i+1) ).mkString("{", ", ", "}")
   }
   println(s"DependencyMaker.Classes = ${moves_str(Set(SHIFT, LEFT, RIGHT))}")
   
@@ -440,11 +440,8 @@ class DependencyMaker(tagger:Tagger) {
       if(i < parse.n -1 )  SHIFT else INVALID, // i.e. not yet at the last word in sentence
       if(stack.length>=2)  RIGHT else INVALID,
       if(stack.length>=1)  LEFT  else INVALID
-    ).filterNot( _ == INVALID).toSet
+    ).filterNot( _ == INVALID ).toSet
     
-    // This is equivalent to there being no valid_moves - so just test valid_moves.isEmpty
-    //def parse_complete = !(stack.length>0 || i<(parse.n-1)) // i.e. we've at (or beyond) the last word, and have no stack left
-
     def get_gold_moves(gold_heads:Vector[Int]) = {
       def deps_between(target:Int, others:List[Int]) = {
         others.exists( word => (gold_heads(word)==target || gold_heads(target) == word))
@@ -453,12 +450,12 @@ class DependencyMaker(tagger:Tagger) {
       val valid = valid_moves
       println(s"GetGold valid moves = ${moves_str(valid)}")
       
-      if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head)) {
-        println(" gold move shortcut : SHIFT")
+      if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head )) {
+        println(" gold move shortcut : {SHIFT}")
         Set(SHIFT) // First condition obvious, second rather weird
       }
       else if( gold_heads(stack.head) == i ) {
-        println(" gold move shortcut : LEFT")
+        println(" gold move shortcut : {LEFT}")
         Set(LEFT) // This move is a must, since the gold_heads tell us to do it
       }
       else {
@@ -469,10 +466,10 @@ class DependencyMaker(tagger:Tagger) {
         val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
         
         // If there are any dependencies between i and the stack, pushing i will lose them.
-        val dont_push_i    = deps_between(i, stack) // This is redundent / over-cautious :: !costly.contains(SHIFT) && 
+        val dont_push_i    = deps_between(i, stack) // This is redundant / over-cautious :: !costly.contains(SHIFT) && 
         
         // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-        val dont_pop_stack = deps_between(stack.head, (i+1 until parse.n-1).toList) // UNTIL is EXCLUSIVE of top
+        val dont_pop_stack = deps_between(stack.head, ((i+1) until (parse.n-1)).toList) // UNTIL is EXCLUSIVE of top
         
         val non_gold = List[Move](
           if( left_incorrect )  LEFT  else INVALID,
@@ -480,7 +477,7 @@ class DependencyMaker(tagger:Tagger) {
           if( dont_pop_stack )  LEFT  else INVALID,
           if( dont_pop_stack )  RIGHT else INVALID
         ).toSet
-        println(s" gold move logic required : non_gold = ${moves_str(non_gold)}")
+        println(s" gold move logic implies  : non_gold = ${moves_str(non_gold)}")
         
         // return the (remaining) moves, which are 'gold'
         (valid -- non_gold)
@@ -639,7 +636,7 @@ class DependencyMaker(tagger:Tagger) {
         if(train) {  // Update the perceptron
           //println(f"Training '${word_norm}%12s': ${classes(guessed)}%4s -> ${classes(truth(i))}%4s :: ")
           val gold_moves = state.get_gold_moves(gold_heads)
-          if(gold_moves.size == 0) { throw new Exception("No Gold Moves!") }
+          if(gold_moves.size == 0) { throw new Exception(s"No Gold Moves at ${state.i}/${state.parse.n}!") }
           
           val best = gold_moves.map( m => (-score(m), m) ).toList.sortBy( _._1 ).head._2 
           perceptron.update(best, guess, features.keys)
@@ -655,7 +652,7 @@ class DependencyMaker(tagger:Tagger) {
     if(true) {
       val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
       val correct_pct = correct*100.0 / gold_heads.length
-      val correct_stars = (0 until 50).map(i => if(i*1 < correct_pct) "*" else "-").mkString
+      val correct_stars = (0 until 100).map(i => (if(i*1 < correct_pct) "x" else "-")).mkString
       
       println(f"Dependency score = ${correct_pct}%6.1f%% :: $correct_stars")
     }
@@ -681,10 +678,10 @@ class DependencyMaker(tagger:Tagger) {
         val features = state.extract_features(words, tags)
         val gold_moves = state.get_gold_moves(gold_heads)
         if(gold_moves.size == 0) { 
-          throw new Exception("No Gold Moves!") 
+          if(gold_moves.size == 0) { throw new Exception(s"No Gold Moves at ${state.i}/${state.parse.n}!") }
         }
         if(gold_moves.size > 1 ) { 
-          println(s"*** Several Gold Moves! : [$gold_moves] : Actual=${gold_heads(state.i)}") 
+          println(s"*** *** *** *** *** *** Several Gold Moves at ${state.i}/${state.parse.n}! : ${moves_str(gold_moves)}") 
         }
         val guess = gold_moves.toList.head
         move_through_sentence_from( state.transition(guess) ) 
@@ -696,7 +693,7 @@ class DependencyMaker(tagger:Tagger) {
     
     val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
     val correct_pct = correct*100.0 / gold_heads.length
-    val correct_stars = (0 until 50).map(i => if(i*1 < correct_pct) "*" else "-").mkString
+    val correct_stars = (0 until 100).map(i => (if(i*1 < correct_pct) "x" else "-")).mkString
     println(f"Dependency GoldMoves correct = ${correct_pct}%6.1f%% :: $correct_stars")
     
     (correct_pct > 99)
