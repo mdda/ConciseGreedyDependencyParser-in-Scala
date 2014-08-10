@@ -623,9 +623,9 @@ class DependencyMaker(tagger:Tagger) {
   }
   
   // TODO : Shuffle sentences, based on seed :: http://stackoverflow.com/questions/11040399/scala-listbuffer-or-equivalent-shuffle
-  def train(sentences:List[Sentence], seed:Int):Unit = {
+  def train(sentences:List[Sentence], seed:Int):Float = {
     val rand = new util.Random(seed)
-    rand.shuffle(sentences).foreach( train_one )
+    rand.shuffle(sentences).map( s=>train_one(s) ).sum / sentences.length
   }
   
   def train_one(sentence:Sentence):Float = goodness(sentence, process(sentence, true))
