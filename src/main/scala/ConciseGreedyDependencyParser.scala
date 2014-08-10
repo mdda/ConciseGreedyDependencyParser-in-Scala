@@ -432,44 +432,48 @@ class DependencyMaker(tagger:Tagger) {
       // i either increases and lengthens the stack, 
       case SHIFT => CurrentState(i+1, i::stack, parse)
       // or stays the same, and shortens the stack, and manipulates left&right 
-      case RIGHT => CurrentState(i, stack.tail, parse.add(stack.tail.head, stack.head))   // parse.add(stack[-2], stack.pop())
-      case LEFT  => CurrentState(i, stack.tail, parse.add(i, stack.head))                 // parse.add(i, stack.pop())
+      case RIGHT => CurrentState(i, stack.tail, parse.add(stack.tail.head, stack.head))   // as in Arc-Standard
+      case LEFT  => CurrentState(i, stack.tail, parse.add(i, stack.head))                 // as in Arc-Eager
     }
     
     def valid_moves:Set[Move] = List[Move](  // only depends on stack_depth (not parse itself)
-      if(i < parse.n -1 )  SHIFT else INVALID, // i.e. not yet at the last word in sentence
+      if(i < parse.n    )  SHIFT else INVALID, // i.e. not yet at the last word in sentence  // was n-1
       if(stack.length>=2)  RIGHT else INVALID,
-      if(stack.length>=1)  LEFT  else INVALID
+      if(stack.length>=1)  LEFT  else INVALID // Original version
+      //if(stack.length>=1 && stack.head != parse.n)  LEFT  else INVALID // See page 405 for second condition
     ).filterNot( _ == INVALID ).toSet
     
     def get_gold_moves(gold_heads:Vector[Int]) = {
+      // See :  Goldberg and Nivre (2013) :: Training Deterministic Parsers with Non-Deterministic Oracles, TACL 2013
+      //        http://www.transacl.org/wp-content/uploads/2013/10/paperno33.pdf
+      //        Method implemented == "dynamic-oracle Arc-Hybrid" (bottom left of page 405, top right of page 411)
       def deps_between(target:Int, others:List[Int]) = {
         others.exists( word => (gold_heads(word)==target || gold_heads(target) == word))
       }
       
       val valid = valid_moves
-      println(s"GetGold valid moves = ${moves_str(valid)}")
+      //println(s"GetGold valid moves = ${moves_str(valid)}")
       
       if(stack.length==0 || ( valid.contains(SHIFT) && gold_heads(i) == stack.head )) {
-        println(" gold move shortcut : {SHIFT}")
+        //println(" gold move shortcut : {SHIFT}")
         Set(SHIFT) // First condition obvious, second rather weird
       }
       else if( gold_heads(stack.head) == i ) {
-        println(" gold move shortcut : {LEFT}")
+        //println(" gold move shortcut : {LEFT}")
         Set(LEFT) // This move is a must, since the gold_heads tell us to do it
       }
       else {
         // Original Python logic has been flipped over by constructing a 'val non_gold' and return 'valid - non_gold'
-        println(s" gold move logic required")
+        //println(s" gold move logic required")
         
         // If the word second in the stack is its gold head, Left is incorrect
         val left_incorrect = (stack.length >= 2 && gold_heads(stack.head) == stack.tail.head)
         
         // If there are any dependencies between i and the stack, pushing i will lose them.
-        val dont_push_i    = deps_between(i, stack) // This is redundant / over-cautious :: !costly.contains(SHIFT) && 
+        val dont_push_i    = (valid.contains(SHIFT) && deps_between(i, stack)) // containing SHIFT protects us against running over end of words
         
         // If there are any dependencies between the stackhead and the remainder of the buffer, popping the stack will lose them.
-        val dont_pop_stack = deps_between(stack.head, ((i+1) until (parse.n-1)).toList) // UNTIL is EXCLUSIVE of top
+        val dont_pop_stack = deps_between(stack.head, ((i+1) until (parse.n)).toList) // UNTIL is EXCLUSIVE of top
         
         val non_gold = List[Move](
           if( left_incorrect )  LEFT  else INVALID,
@@ -477,7 +481,7 @@ class DependencyMaker(tagger:Tagger) {
           if( dont_pop_stack )  LEFT  else INVALID,
           if( dont_pop_stack )  RIGHT else INVALID
         ).toSet
-        println(s" gold move logic implies  : non_gold = ${moves_str(non_gold)}")
+        //println(s" gold move logic implies  : non_gold = ${moves_str(non_gold)}")
         
         // return the (remaining) moves, which are 'gold'
         (valid -- non_gold)
@@ -683,7 +687,7 @@ class DependencyMaker(tagger:Tagger) {
         if(gold_moves.size > 1 ) { 
           println(s"*** *** *** *** *** *** Several Gold Moves at ${state.i}/${state.parse.n}! : ${moves_str(gold_moves)}") 
         }
-        val guess = gold_moves.toList.head
+        val guess = gold_moves.toList.reverse.head
         move_through_sentence_from( state.transition(guess) ) 
       }
     }
@@ -694,7 +698,12 @@ class DependencyMaker(tagger:Tagger) {
     val correct = final_state.parse.heads.zip( gold_heads ).count( pair => (pair._1 == pair._2))
     val correct_pct = correct*100.0 / gold_heads.length
     val correct_stars = (0 until 100).map(i => (if(i*1 < correct_pct) "x" else "-")).mkString
+    println(s"""       index : ${(0 until gold_heads.length).map( v => f"${v}%2d" )}""")
+    println(s"""Gold   Moves : ${gold_heads.map( v => f"${v}%2d" )}""")
+    println(s""" Found Moves : ${final_state.parse.heads.map( v => f"${v}%2d" )}""")
     println(f"Dependency GoldMoves correct = ${correct_pct}%6.1f%% :: $correct_stars")
+    
+    println(s" words.length=${words.length}, tags.length=${tags.length}, gold_heads.length=${gold_heads.length}")
     
     (correct_pct > 99)
   }
@@ -854,8 +863,10 @@ object Main extends App {
         val dm = DependencyMaker.load(file_lines, tagger)
         
         if(args.contains("gold")) {
-          val s = training_sentences(0)
-          dm.test_gold_moves(s)
+          (0 until 10).foreach { i =>
+            val s = training_sentences(i)
+            dm.test_gold_moves(s)
+          }
         }
     }
     }
