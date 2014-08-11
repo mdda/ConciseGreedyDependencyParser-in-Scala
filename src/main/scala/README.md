@@ -1,7 +1,7 @@
 Updates / Issues for Scala conversion
 ===========================================
 
-Internal representation
+Internal weight representation
 ------------------------------
 
 The Python version (deliberately) has two modes of operation : Training and 'Real'.
@@ -31,25 +31,70 @@ One argument for doing it this way is that it means that ```score()``` doesn't h
 juggling functions around, so the Scala ```score()``` method can simply be passed either the ```current``` or ```average``` function.
 
 
+Internal dependency list representation
+------------------------------------------------------------
+
+Scala lists are quicker to prepend to, so instead of maintaining ```stack``` using ```.append()``` and ```stack[-1]```, 
+the Scala version simply does ``` x :: stack``` and checks ```stack.head```.
 
 
-Scala lists are quicker to prepend to, so we're checking stack.head (== stack[0]) rather than stack[-1]
+Gold Move Logic
+------------------------------------------------------------
 
-gold_moves logic is essentially 'all_moves - (all_moves - valid_moves - bad_moves)', which can be flipped around
+The ```gold_moves``` logic is essentially ```all_moves - (all_moves - valid_moves - bad_moves)```.  This makes sense in Python, which
+doesn't have a nice ```Set``` natively.  But in Scala, it can easily be flipped around.
 
-Odd : in get_features() :: "if(stack0 != 0)" should probably be "if(stack0>=0)" (since -1 is the bum value)
 
-//confusionmatrix == UNUSED  
-//DefaultList(list:List[Int], default:Int=0)  Never gets tested outside of its bounds (careful guards in get_features())
+Unused code
+------------------------------------------------------------
 
+There appears to be stale code in the Python code-base : 
+
+ * ```confusionmatrix``` is unused  
+
+ * ```DefaultList(list:List[Int], default:Int=0)``` apparently never gets called outside of its bounds, because of the careful guards in ```get_features()```
+
+
+Bug?
+------------------------------------------------------------
+
+In the Python version, ```get_features()``` contains the following test :
+
+```
+if(stack0 != 0)
+```
+
+this  should probably be ```if(stack0>=0)``` (since ```-1``` is the invalid value for ```stack0```, ```0``` is a valid, though strange, possibility)
+
+
+Misc (mainly to do with off-by-one effects)
+------------------------------------------------------------
+
+The Python version slightly pre-pads the sentence words, which is actually unnecessary : Fixing this requires
+a bunch of minor updates, but it's worth pointing out for consistency purposes.
+
+```
 //if(stack.length>=1)  LEFT  else INVALID // Original version
 if(stack.length>=1 && stack.head != n)  LEFT  else INVALID // See page 405 for second condition
+```
 
+```
 // "range(i+1, n-1)" should be "range(i+1, n)" //  since range(i,j) is [i,j)
 val dont_pop_stack = deps_between(stack.head, ((i+1) until (parse.n)).toList) // UNTIL is EXCLUSIVE of top
+```
 
-10 iterations : 23s,  1.8Mb of data (800k zipped):
-Tagger Performance = Vector(0.8492446, 0.9186569, 0.9406191, 0.95281583, 0.9603189, 0.9662161, 0.971103, 0.9758865, 0.9780635, 0.97971076)
 
-15 iterations : 350s, 14Mb of data (6Mb zipped):
-Dependency Performance = Vector(0.7401748, 0.8171352, 0.8462659, 0.8658807, 0.8850597, 0.8982282, 0.90726405, 0.9184, 0.9264295, 0.9348865, 0.9400386, 0.9435337, 0.94961494, 0.9521072, 0.95588624)
+Overall performance / stats
+------------------------------------------------------------
+
+When training on the 199 file ```dependency_treebank```, we get the following results 
+(performance figures are the fraction of correct tags / dependency assignments over the whole of the training set for each iteration)
+
+* Tagger : 10 iterations : 23s.  Saved size on disc : 1.8Mb (800k zipped)
+
+  * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
+
+* Dependency Parser : 15 iterations : 350s.  Saved size on disc : 14Mb of data (6Mb zipped)
+
+  * Dependency Performance = Vector(0.740, 0.817, 0.846, 0.865, 0.885, 0.898, 0.907, 0.918, 0.926, 0.934, 0.940, 0.943, 0.949, 0.952, 0.956)
+
