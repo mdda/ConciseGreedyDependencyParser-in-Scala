@@ -41,8 +41,8 @@ the Scala version simply does ``` x :: stack``` and checks ```stack.head```.
 Gold Move Logic
 ------------------------------------------------------------
 
-The ```gold_moves``` logic is essentially ```all_moves - (all_moves - valid_moves - bad_moves)```.  This makes sense in Python, which
-doesn't have a nice ```Set``` natively.  But in Scala, it can easily be flipped around.
+The ```gold_moves``` logic is essentially ```Set(gold_moves) = Set( all_moves - (all_moves - valid_moves - bad_moves) )```.  
+This makes sense in Python, which doesn't have a nice ```Set``` natively.  But in Scala, it can easily be flipped around.
 
 
 Unused code
