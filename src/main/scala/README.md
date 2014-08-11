@@ -98,3 +98,22 @@ When training on the 199 file ```dependency_treebank```, we get the following re
 
   * Dependency Performance = Vector(0.740, 0.817, 0.846, 0.865, 0.885, 0.898, 0.907, 0.918, 0.926, 0.934, 0.940, 0.943, 0.949, 0.952, 0.956)
 
+
+Overall, the Scala version is longer than the Python one.  However, the basic code is over more concise - except for :
+
+ * the auto-vivification features for maps in Python (needs more boilerplate in Scala)
+ 
+ * the pickling, which is built-in for Python, and is very tedious in Scala :
+   
+   * There is a scala-pickle library, that is 'coming soon', but that appears to ```x4``` compile times (? because it's macro/implict heavy)
+  
+   * In the end, it was most expedient to just write the Scala pickling by hand - with the side-effect that the stored files are human-legible
+   
+ * there are a lot more comments, mainly to help decipher what should be going on
+ 
+ * there is test code to verify that ```gold_moves``` does actually work if the moves themselves are used on a gold sentence
+ 
+ * there's some benchmarking code to test the speed of the mutable / immutable choices
+ 
+ * there are both mutable and immutable versions of ```score``` and ```classes_and_tagdict``` (which is required before a tagger can be instantiated)
+
