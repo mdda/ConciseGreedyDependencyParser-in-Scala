@@ -46,12 +46,11 @@ In order to read in a directory's worth of free 'gold tagged' data, download the
 http://www.nltk.org/data.html
 ```
 
-or by downloading directly from : ```http://www.nltk.org/nltk_data/```.
+or by downloading directly from : ```http://www.nltk.org/nltk_data/```, the dataset that is particularly useful is : ```Dependency Parsed Treebank```.
+At the time of writing, a direct link is : ```http://nltk.github.com/nltk_data/packages/corpora/dependency_treebank.zip```.
 
-The dataset that is particularly useful is : ```Dependency Parsed Treebank```.
-
-
-Then search the Scala file for ```nltk_data``` and update the path to point to the appropriate directory.
+Once the file archive has been downloaded and the files extracted, 
+search the Scala source for ```nltk_data``` and update the path to point to the appropriate directory.
 
 
 
