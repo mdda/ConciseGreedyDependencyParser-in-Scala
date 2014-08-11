@@ -113,7 +113,7 @@ Overall performance / stats
 ------------------------------------------------------------
 
 When training on the 199 file ```dependency_treebank```, we get the following results 
-(performance figures are the fraction of correct tags / dependency assignments over the whole of the training set for each iteration)
+(performance figures are the fraction of correct tags / dependency assignments over the whole of the *training set* for each iteration)
 
 * Tagger : 10 iterations : 23s.  Saved size on disc : 1.8Mb (800k zipped)
 
