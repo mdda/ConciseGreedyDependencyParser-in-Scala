@@ -84,20 +84,9 @@ val dont_pop_stack = deps_between(stack.head, ((i+1) until (parse.n)).toList) //
 ```
 
 
-Overall performance / stats
-------------------------------------------------------------
 
-When training on the 199 file ```dependency_treebank```, we get the following results 
-(performance figures are the fraction of correct tags / dependency assignments over the whole of the training set for each iteration)
-
-* Tagger : 10 iterations : 23s.  Saved size on disc : 1.8Mb (800k zipped)
-
-  * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
-
-* Dependency Parser : 15 iterations : 350s.  Saved size on disc : 14Mb of data (6Mb zipped)
-
-  * Dependency Performance = Vector(0.740, 0.817, 0.846, 0.865, 0.885, 0.898, 0.907, 0.918, 0.926, 0.934, 0.940, 0.943, 0.949, 0.952, 0.956)
-
+Code size (which was a compelling feature of the original Python)
+----------------------------------------------------------------------
 
 Overall, the Scala version is longer than the Python one.  However, the basic code is over more concise - except for :
 
@@ -116,4 +105,19 @@ Overall, the Scala version is longer than the Python one.  However, the basic co
  * there's some benchmarking code to test the speed of the mutable / immutable choices
  
  * there are both mutable and immutable versions of ```score``` and ```classes_and_tagdict``` (which is required before a tagger can be instantiated)
+
+
+Overall performance / stats
+------------------------------------------------------------
+
+When training on the 199 file ```dependency_treebank```, we get the following results 
+(performance figures are the fraction of correct tags / dependency assignments over the whole of the training set for each iteration)
+
+* Tagger : 10 iterations : 23s.  Saved size on disc : 1.8Mb (800k zipped)
+
+  * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
+
+* Dependency Parser : 15 iterations : 350s.  Saved size on disc : 14Mb of data (6Mb zipped)
+
+  * Dependency Performance = Vector(0.740, 0.817, 0.846, 0.865, 0.885, 0.898, 0.907, 0.918, 0.926, 0.934, 0.940, 0.943, 0.949, 0.952, 0.956)
 
