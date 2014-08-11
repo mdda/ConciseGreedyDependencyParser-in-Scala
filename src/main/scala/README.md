@@ -90,15 +90,17 @@ Code size (which was a compelling feature of the original Python)
 
 Overall, the Scala version is longer than the Python one.  However, the basic code is over more concise - except for :
 
+ * Scala can do proper type-checking, so there are a lot more types used (rather than using ```Int``` both as an index and as a count, for instance)
+
  * the auto-vivification features for maps in Python (needs more boilerplate in Scala)
  
  * the pickling, which is built-in for Python, and is very tedious in Scala :
    
-   * There is a scala-pickle library, that is 'coming soon', but that appears to ```x4``` compile times (? because it's macro/implict heavy)
+   * There is a ```scala-pickle``` library, that is 'coming soon', but that appears to ```x4``` compile times (? because it's macro/implict heavy)
   
-   * In the end, it was most expedient to just write the Scala pickling by hand - with the side-effect that the stored files are human-legible
+   * In the end, it was most expedient to just write the Scala pickling by hand - with the side-effect that the stored files are human-legible, but the code has additional bloat
    
- * there are a lot more comments, mainly to help decipher what should be going on
+ * there are some more comments, mainly to help decipher what should be going on
  
  * there is test code to verify that ```gold_moves``` does actually work if the moves themselves are used on a gold sentence
  
