@@ -19,5 +19,6 @@ project/plugins/project/
 
 # local specific
 .geany/session*
-python/
+python/*-client.py
+python/*-server.py
 mdda_notes.txt

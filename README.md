@@ -11,14 +11,24 @@ With original BSD code here :
 
   * https://gist.github.com/syllog1sm/10343947
 
-This version includes none of the original code, but inherits the same minimalist ideals, in Scala.
+This version includes the original code, but is mostly about implementing the same minimalist ideals, in Scala.
 
 There's a much more complete system (which extends over very many more files, however) 
 at Matthew Honnibal's (the original author) GitHub account : https://github.com/syllog1sm/redshift.  
 
 
-
-It is currently a *work-in-progress*
+Significant Files
 --------------------------------------
 
-I'll update this readme when there's something that is actually testable.
+Original Python version (as well as a works-for-me version, that's adapted to import from Python's NLTK CONLL files) :
+```
+./python/honnibal-original-gist.py
+./python/concise-greedy-dependency-parser.py 
+```
+
+The Scala version :
+
+```
+./src/main/scala/ConciseGreedyDependencyParser.scala 
+```
+
