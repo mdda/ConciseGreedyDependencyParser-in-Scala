@@ -25,7 +25,7 @@ For the Scala version, the three integers (current, total, ts) are always preser
 
  * The perceptrons are always ready to do further training, since sufficient state is stored
 
- * Despite more data being stored, the disk space used is actually less
+ * Despite more data being stored (i.e. more of the important state), less disk space is actually used (since many entries are low-number-of-digit integers)
  
 One argument for doing it this way is that it means that ```score()``` doesn't have to be written twice.  However, Scala is very comfortable with
 juggling functions around, so the Scala ```score()``` method can simply be passed either the ```current``` or ```average``` function.
