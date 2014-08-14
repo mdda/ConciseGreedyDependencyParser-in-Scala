@@ -452,6 +452,15 @@ def _pc(n, d):
     return (float(n) / d) * 100
 
 
+def train_tagger(parser, sentences, nr_iter):
+    parser.tagger.start_training(sentences)
+    for itn in range(nr_iter):
+        random.shuffle(sentences)
+        for words, gold_tags, gold_parse in sentences:
+            parser.tagger.train_one(words, gold_tags)
+    print 'Averaging weights'
+    parser.model.average_weights()
+
 def train(parser, sentences, nr_iter):
     parser.tagger.start_training(sentences)
     for itn in range(nr_iter):
@@ -568,8 +577,11 @@ def learn_mdda(model_dir, train_loc, load_if_exists=False):
         sentences.extend(list(read_conll_mdda(os.path.join(train_loc, f))))
         #break # Just 1 set of sentences to start
     #print sentences
-    train(parser, sentences, nr_iter=50)
-    parser.save()
+    
+    train_tagger(parser, sentences, nr_iter=10)
+    #train(parser, sentences, nr_iter=50)
+    
+    #parser.save()
     
     return 
     
@@ -618,10 +630,14 @@ def sentence_to_words(sentence):
 if __name__ == '__main__':
     #main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
     
+    
     if True :
-        learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
+        import timeit 
+        def timeable():
+            learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
+        timeit.timeit(timeable, number=1)
 
-    if True :
+    if False :
         sentences = [
         "Sorry for taking a little longer than just the weekend : Though I think I've now got a good handle on the problem, the given solutions, and have realistic ideas about what you can expect from an implementation...",
         "I've attached a ZIP of your originals, plus some derived entities - which I extracted using open source (non-commercial) software that was trained on 'generic' documents.  ",
