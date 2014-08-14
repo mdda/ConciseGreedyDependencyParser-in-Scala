@@ -578,8 +578,8 @@ def learn_mdda(model_dir, train_loc, load_if_exists=False):
         #break # Just 1 set of sentences to start
     #print sentences
     
-    train_tagger(parser, sentences, nr_iter=10)
-    #train(parser, sentences, nr_iter=50)
+    #train_tagger(parser, sentences, nr_iter=10)
+    train(parser, sentences, nr_iter=15)
     
     #parser.save()
     
@@ -631,11 +631,19 @@ if __name__ == '__main__':
     #main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
     
     
+    if False :
+      t1 = time.time()
+      learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
+      t2 = time.time()
+      print 'Tagger Learning took %0.3f s' % ((t2-t1)*1.0)
+
     if True :
-        import timeit 
-        def timeable():
-            learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
-        timeit.timeit(timeable, number=1)
+      t1 = time.time()
+      learn_mdda("models", "/home/andrewsm/nltk_data/corpora/dependency_treebank/")
+      t2 = time.time()
+      print 'Combined Learning took %0.3f s' % ((t2-t1)*1.0)
+      # But each tagger learning took ~ 7.4sec
+      print 'Dependecy Learning (without tagger) the took %0.3f s' % ((t2-t1)*1.0 - 5*7.4)
 
     if False :
         sentences = [

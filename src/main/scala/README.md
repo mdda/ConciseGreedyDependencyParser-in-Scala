@@ -115,11 +115,15 @@ Overall performance / stats
 When training on the 199 file ```dependency_treebank```, we get the following results 
 (performance figures are the fraction of correct tags / dependency assignments over the whole of the *training set* for each iteration)
 
-* Tagger : 10 iterations : 23s.  Saved size on disc : 1.8Mb (800k zipped)
+ * Tagger : 10 iterations took 23s (Python version : 74s). Saved size on disc : 1.8Mb (800k zipped)
 
-  * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
+   * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
 
-* Dependency Parser : 15 iterations : 350s.  Saved size on disc : 14Mb of data (6Mb zipped)
+  * Dependency Parser : 15 iterations took 350s (Python version : 663s).  Saved size on disc : 14Mb of data (6Mb zipped)
 
-  * Dependency Performance = Vector(0.740, 0.817, 0.846, 0.865, 0.885, 0.898, 0.907, 0.918, 0.926, 0.934, 0.940, 0.943, 0.949, 0.952, 0.956)
+    * Dependency Performance = Vector(0.740, 0.817, 0.846, 0.865, 0.885, 0.898, 0.907, 0.918, 0.926, 0.934, 0.940, 0.943, 0.949, 0.952, 0.956)
 
+  
+  * The Python dependency performance is not directly comparable, since in the Python version the tagger is trained at the same time as the dependencies (for the 5 iterations it does through the training set).  Here are the Python results anyway :
+  
+    * Dependency Performance.py =    [0.639, 0.757, 0.804, 0.831, 0.856, 0.881, 0.896, 0.905, 0.915, 0.919, 0.926, 0.929, 0.931, 0.936, 0.938]
