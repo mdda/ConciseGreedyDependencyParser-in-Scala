@@ -69,3 +69,12 @@ run test tagger
 run test gold
 # TODO : run test deps
 ```
+
+Upcoming
+--------------------------------------
+
+Adding a ZeroMQ mode, so that the trained Parser can respond to incoming requests
+dynamically.  
+
+Of course, a REST interface would also be possible, but (for reasons beyond this implementation),
+there's more value in making it work a part of a ZeroMQ toolchain.
