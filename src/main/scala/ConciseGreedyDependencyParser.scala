@@ -866,7 +866,7 @@ object Main extends App {
             dm.test_gold_moves(s)
           }
         }
-    }
+      }
     }
     else {
       printf("Usage :\nrun {train|test} {tagger|deps|both|gold} {save}\n")

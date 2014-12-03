@@ -77,9 +77,10 @@ Adding a ZeroMQ mode, so that the trained Parser can respond to incoming request
 dynamically.  
 
 Of course, a REST interface would also be possible, but (for reasons beyond this implementation),
-there's more value in making it work a part of a ZeroMQ toolchain.  Indeed, 
-[this ZeroMQ/Clojure blog post](http://augustl.com/blog/2013/zeromq_instead_of_http/) 
+there's probably additional value in making it work a part of a ZeroMQ toolchain.  
+Indeed, [this ZeroMQ/Clojure blog post](http://augustl.com/blog/2013/zeromq_instead_of_http/) 
 makes it clear that there are many desirable properties of 'HTTP' semantics over ZeroMQ.
 
-
-
+```
+# TODO : run server <PORT>
+```
