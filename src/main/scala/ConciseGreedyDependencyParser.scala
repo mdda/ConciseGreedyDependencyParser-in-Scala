@@ -778,6 +778,9 @@ object Main extends App {
   
   override def main(args: Array[String]):Unit = {
     //args.zipWithIndex map { t => println(s"arg[${t._2}] = '${t._1}'") }
+    val tagger_model_file = "CGDP-tagger-data.txt"
+    val dependency_model_file = "CGDP-dependency-data.txt"
+    
     val utils = new CGDP
     
     //val sentences = utils.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
@@ -809,14 +812,14 @@ object Main extends App {
         
         if(args.contains("save") || args.contains("both") ) { // Implicit save between stages here...
           //val fos = new FileOutputStream("tagger-toString.txt")
-          val fos = new PrintWriter("CGDP-tagger-data.txt")
+          val fos = new PrintWriter(tagger_model_file)
           fos.write(tagger.toString)
           fos.close
         }
       }
       if(args.contains("deps") || args.contains("both")) {
         // First, load the tagger
-        val file_lines = scala.io.Source.fromFile("CGDP-tagger-data.txt").getLines
+        val file_lines = scala.io.Source.fromFile(tagger_model_file).getLines
         val tagger = Tagger.load(file_lines)
         
         // Now instatiate a new DependencyMaker
@@ -838,7 +841,7 @@ object Main extends App {
         println(s"dependencies = ${s.map{_.norm}.zip(dm.parse(s))}")
 */
         if(args.contains("save") ) {
-          val fos = new PrintWriter("CGDP-dependency-data.txt")
+          val fos = new PrintWriter(dependency_model_file)
           fos.write(dm.toString)
           fos.close
         }
@@ -848,7 +851,7 @@ object Main extends App {
     else if(args.contains("test")) {
       val utils = new CGDP
       
-      val file_lines = scala.io.Source.fromFile("CGDP-tagger-data.txt").getLines
+      val file_lines = scala.io.Source.fromFile(tagger_model_file).getLines
       val tagger = Tagger.load(file_lines)
       
       if(args.contains("tagger")) {
@@ -857,7 +860,7 @@ object Main extends App {
         println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
       } 
       else {
-        val file_lines = scala.io.Source.fromFile("CGDP-dependency-data.txt").getLines
+        val file_lines = scala.io.Source.fromFile(dependency_model_file).getLines
         val dm = DependencyMaker.load(file_lines, tagger)
         
         if(args.contains("gold")) {
@@ -867,6 +870,12 @@ object Main extends App {
           }
         }
       }
+    }
+    else if(args.contains("server")) {
+      val utils = new CGDP
+      val tagger = Tagger.load(scala.io.Source.fromFile(tagger_model_file).getLines)
+      val dm = DependencyMaker.load(scala.io.Source.fromFile(dependency_model_file).getLines, tagger)
+      // Call server with args
     }
     else {
       printf("Usage :\nrun {train|test} {tagger|deps|both|gold} {save}\n")
