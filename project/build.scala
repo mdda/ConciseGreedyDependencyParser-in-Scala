@@ -16,10 +16,15 @@ object ConciseGreedyDependencyParserBuild extends Build {
       //"com.mycompany" % "mylibrary" % "0.1-SNAPSHOT"
       
       //"org.scala-lang" %% "scala-pickling" % "0.8.0"  
-      "org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT"  
+      //"org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT"  
+
+      //"com.typesafe.akka" %% "akka-actor" % "2.2.3",
+      "org.zeromq" % "jeromq" % "0.3.3"
+      //"org.zeromq" % "zeromq-scala-binding" % "0.0.9"
     ),
     resolvers ++= Seq(
-      Resolver.sonatypeRepo("snapshots") // Needed to use the 0.9.0-SNAPSHOT
+      //Resolver.sonatypeRepo("snapshots") // Needed to use the scala-pickling 0.9.0-SNAPSHOT
+      Resolver.sonatypeRepo("releases")    // Needed to get the zeromq-scala-binding
     )
   )
   

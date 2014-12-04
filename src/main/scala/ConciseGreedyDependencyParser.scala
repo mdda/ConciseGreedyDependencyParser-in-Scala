@@ -870,11 +870,10 @@ object Main extends App {
       }
     }
     else if(args.contains("server")) {
-      println("HELLO server")
+      import ConciseGreedyDependencyServer.rrserver
       //val tagger = Tagger.load(scala.io.Source.fromFile(tagger_model_file).getLines)
       //val dm = DependencyMaker.load(scala.io.Source.fromFile(dependency_model_file).getLines, tagger)
-      // Call server with args
-      
+      rrserver.serve(args)
     }
     else {
       printf("Usage :\nrun {train|test} {tagger|deps|both|gold} {save}\n")
