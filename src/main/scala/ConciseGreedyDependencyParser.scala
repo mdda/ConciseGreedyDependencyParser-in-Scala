@@ -784,7 +784,7 @@ object Main extends App {
     val utils = new CGDP
     
     //val sentences = utils.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
-    val training_sentences = (for (
+    lazy val training_sentences = (for (
        (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
        if( file.getName.endsWith(".dp") )
        //if(i<5)
@@ -849,8 +849,6 @@ object Main extends App {
       
     }
     else if(args.contains("test")) {
-      val utils = new CGDP
-      
       val file_lines = scala.io.Source.fromFile(tagger_model_file).getLines
       val tagger = Tagger.load(file_lines)
       
@@ -872,10 +870,11 @@ object Main extends App {
       }
     }
     else if(args.contains("server")) {
-      val utils = new CGDP
-      val tagger = Tagger.load(scala.io.Source.fromFile(tagger_model_file).getLines)
-      val dm = DependencyMaker.load(scala.io.Source.fromFile(dependency_model_file).getLines, tagger)
+      println("HELLO server")
+      //val tagger = Tagger.load(scala.io.Source.fromFile(tagger_model_file).getLines)
+      //val dm = DependencyMaker.load(scala.io.Source.fromFile(dependency_model_file).getLines, tagger)
       // Call server with args
+      
     }
     else {
       printf("Usage :\nrun {train|test} {tagger|deps|both|gold} {save}\n")
