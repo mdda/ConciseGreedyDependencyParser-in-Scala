@@ -11,7 +11,7 @@ package ConciseGreedyDependencyServer
 */
 
 import org.zeromq.ZMQ
-import org.zeromq.ZMQ.{Context,Socket}
+//import org.zeromq.ZMQ.{Context,Socket}
 
 object rrserver {
   def serve(args : Array[String]) {
