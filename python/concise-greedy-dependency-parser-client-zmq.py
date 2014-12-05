@@ -4,7 +4,8 @@
 # Sends "Hello" to server, expects "World" back
 #
 
-# Needs : "yum install zeromq-devel"   ## Happens to be 2.2 on Fedora 20
+# Tried : "yum install zeromq-devel"    ## Happens to be 2.2 on Fedora 20
+# Using : "yum install zeromq3-devel"   ## Happens to be 3.2.4 on Fedora 20
 # Needs : "easy_install pyzmq"
 import zmq
 
