@@ -22,7 +22,7 @@ object ConciseGreedyDependencyParserBuild extends Build {
       "org.zeromq" % "jeromq" % "0.3.3"
       
       //"org.zeromq" % "zeromq-scala-binding" % "0.0.9" // Not present in releases, apparently
-      //"org.zeromq" %% "zeromq-scala-binding" % "0.0.6"
+      //"org.zeromq" %% "zeromq-scala-binding" % "0.0.6" // Has 'issues'
 
     ),
     resolvers ++= Seq(

@@ -21,19 +21,15 @@ object rrserver {
     val context = ZMQ.context(1)
     val receiver = context.socket(ZMQ.REP)
     
-    receiver.connect("tcp://localhost:5560")
+    receiver.connect("tcp://127.0.0.1:5678") // So the client must 'bind' to the socket
     println("HELLO server - Connected")
 
     while (true) {
       // Wait for next request from client
-      // We will wait for a 0-terminated string (C string) from the client,
-      // so that this server also works with The Guide's C and C++ "Hello World" clients
+      val request = receiver.recv (0)  // This is no flags, nothing to do with null termination
       
-      val request = receiver.recv (0)
-      // In order to display the 0-terminated string as a String,
-      // we omit the last byte from request
       println ("Received request: [" + 
-                new String(request, 0, request.length-1) // Creates a String from request, minus the last byte
+                new String(request) // Creates a String from request
                 + "]")
 
       // Do some 'work'
@@ -44,10 +40,8 @@ object rrserver {
       }
 
       // Send reply back to client
-      // We will send a 0-terminated string (C string) back to the client,
-      // so that this server also works with The Guide's C and C++ "Hello World" clients
-      val reply = "World ".getBytes
-      reply(reply.length-1)=0 //Sets the last byte of the reply to 0
+      val reply = "World".getBytes
+      //NOOOO ! :: reply(reply.length-1)=0 //Sets the last byte of the reply to 0 
       receiver.send(reply, 0)
     }
   }

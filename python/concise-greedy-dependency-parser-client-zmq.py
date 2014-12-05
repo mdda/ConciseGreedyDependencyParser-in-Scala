@@ -12,13 +12,15 @@ import zmq
 # Prepare our context and sockets
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
-socket.connect("tcp://localhost:5560")
+socket.bind("tcp://127.0.0.1:5678")
 
-print("Connected to socket")
+print("Client is Bound to socket")
 
 # Do 10 requests, waiting each time for a response
 for request in range(1,11):
     print("Sending %d" % request)
     socket.send(b"Hello")
+    
+    # Wait for response
     message = socket.recv()
     print("Received reply %s [%s]" % (request, message))
