@@ -20,7 +20,10 @@ object ConciseGreedyDependencyParserBuild extends Build {
 
       //"com.typesafe.akka" %% "akka-actor" % "2.2.3",
       "org.zeromq" % "jeromq" % "0.3.3"
-      //"org.zeromq" % "zeromq-scala-binding" % "0.0.9"
+      
+      //"org.zeromq" % "zeromq-scala-binding" % "0.0.9" // Not present in releases, apparently
+      //"org.zeromq" %% "zeromq-scala-binding" % "0.0.6"
+
     ),
     resolvers ++= Seq(
       //Resolver.sonatypeRepo("snapshots") // Needed to use the scala-pickling 0.9.0-SNAPSHOT

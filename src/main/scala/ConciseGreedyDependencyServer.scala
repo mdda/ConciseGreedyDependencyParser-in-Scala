@@ -22,6 +22,7 @@ object rrserver {
     val receiver = context.socket(ZMQ.REP)
     
     receiver.connect("tcp://localhost:5560")
+    println("HELLO server - Connected")
 
     while (true) {
       // Wait for next request from client
@@ -32,7 +33,7 @@ object rrserver {
       // In order to display the 0-terminated string as a String,
       // we omit the last byte from request
       println ("Received request: [" + 
-                new String(request,0,request.length-1) // Creates a String from request, minus the last byte
+                new String(request, 0, request.length-1) // Creates a String from request, minus the last byte
                 + "]")
 
       // Do some 'work'
