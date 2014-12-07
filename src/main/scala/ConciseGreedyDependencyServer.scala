@@ -3,6 +3,7 @@ package ConciseGreedyDependencyServer
 import org.zeromq.ZMQ
 
 // See : https://www.playframework.com/documentation/2.0/ScalaJson
+// And : https://www.playframework.com/documentation/2.3.x/ScalaJson
 import play.api.libs.json
 
 
@@ -19,18 +20,20 @@ object rrserver {
 
     while (true) {
       // Wait for next request from client
-      val request = receiver.recv (0)  // This is no flags, nothing to do with null termination
+      val request = receiver.recv (0)  // This are no flags, nothing to do with null termination
       
       println ("Received request: [" + 
                 new String(request) // Creates a String from request
                 + "]")
 
+/*      
       // Do some 'work'
       try {
         Thread.sleep (1000)
       } catch {
         case e: InterruptedException => e.printStackTrace()
       }
+*/
 
       // Send reply back to client
       val reply = "World".getBytes
