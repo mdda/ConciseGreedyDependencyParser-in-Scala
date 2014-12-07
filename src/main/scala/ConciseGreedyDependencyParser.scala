@@ -566,10 +566,7 @@ class DependencyMaker(tagger:Tagger) {
       //  String-distance :: Cap numeric features at 5? (NB: n0 always > s0, by construction)
       val dist = if(s0 >= 0) math.min(n0 - s0, 5) else 0  // WAS :: ds0n0
       
-      //val feature_set = Set(
       val bias = Feature("bias", "")  // It's useful to have a constant feature, which acts sort of like a prior
-      
-      //val feature_set = mutable.Set[Feature]()
 
       val word_unigrams = for( 
         word <- List(wn0, wn1, wn2, ws0, ws1, ws2, wn0b1, wn0b2, ws0b1, ws0b2, ws0f1, ws0f2)
