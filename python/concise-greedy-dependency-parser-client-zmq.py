@@ -27,8 +27,8 @@ if False : # This is the Hello World test
       message = socket.recv()
       print("Received reply %d [%s]" % (request, message))
 
-# Do 10 requests, waiting each time for a response
-for num in range(1,11):
+# Do some requests, waiting each time for a response
+for num in range(1,4):
     body = {
       'sentences': [
         'Between 1994 and 2000, Ms Ding worked in the Shenzhen office of Yixing Silk-Linen Factory and was in charge of regional sales. ', 

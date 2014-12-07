@@ -6,8 +6,9 @@ import org.zeromq.ZMQ
 // And : https://www.playframework.com/documentation/2.3.x/ScalaJson
 import play.api.libs.json._
 
+import ConciseGreedyDependencyParser.{CGDP, Tagger, DependencyMaker}
 
-object rrserver {
+case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
   def serve(args : Array[String]) {
     println("HELLO server - Started")
     
@@ -42,6 +43,14 @@ object rrserver {
           s.get match {
             case "/redcatlabs/handshakes/api/v1.0/parse" => {
                 println("Doing a parse")
+                
+/*                
+                val txt="Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29 ."
+                val s = utils.sentence(txt)
+                println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
+                
+                dm.test_gold_moves(s)
+*/
               }
           }
         case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString()) 
@@ -53,4 +62,6 @@ object rrserver {
       receiver.send(reply, 0)
     }
   }
+  
+  //def parse_sentences(
 }
