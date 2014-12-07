@@ -1,17 +1,10 @@
 package ConciseGreedyDependencyServer
 
-/*
-* Hello World server in Scala
-* Binds REP socket to tcp://localhost:5560
-* Expects "Hello" from client, replies with "World"
-*
-* @author Giovanni Ruggiero
-* @email giovanni.ruggiero@gmail.com
-*
-*/
-
 import org.zeromq.ZMQ
-//import org.zeromq.ZMQ.{Context,Socket}
+
+// See : https://www.playframework.com/documentation/2.0/ScalaJson
+import play.api.libs.json
+
 
 object rrserver {
   def serve(args : Array[String]) {

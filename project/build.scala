@@ -22,15 +22,17 @@ object ConciseGreedyDependencyParserBuild extends Build {
       //"org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT"  
 
       //"com.typesafe.akka" %% "akka-actor" % "2.2.3",
-      "org.zeromq" % "jeromq" % "0.3.3"
+      "org.zeromq" % "jeromq" % "0.3.3",
       
       //"org.zeromq" % "zeromq-scala-binding" % "0.0.9" // Not present in releases, apparently
       //"org.zeromq" %% "zeromq-scala-binding" % "0.0.6" // Has 'issues'
-
+      
+      "com.typesafe.play" %% "play-json" % "2.2.1"
     ),
     resolvers ++= Seq(
       //Resolver.sonatypeRepo("snapshots") // Needed to use the scala-pickling 0.9.0-SNAPSHOT
-      Resolver.sonatypeRepo("releases")    // Needed to get the zeromq-scala-binding
+      Resolver.sonatypeRepo("releases"),    // Needed to get the zeromq-scala-binding
+      "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"  // For play-json
     )
   )
   
