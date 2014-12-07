@@ -38,7 +38,7 @@ for num in range(1,4):
 
     # See : http://augustl.com/blog/2013/zeromq_instead_of_http/
     request = dict(
-      method = 'POST',
+      method = 'POSaT',
       path = '/redcatlabs/handshakes/api/v1.0/parse',
       body = body,
     )

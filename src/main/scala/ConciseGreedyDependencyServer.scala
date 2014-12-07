@@ -24,26 +24,25 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
       val request = receiver.recv (0)  // This has flags of zero, nothing to do with null termination
       println ("Received request: >" + new String(request) + "<") // Creates a String from request
 
-      // Parse method and path : 
       val json = Json.parse(request)
-      
-      //val pair = List(json \ "method", json \ "path").map(_.validate[List[String]]) // Hmm
-      
-      val response = (json \ "path").validate[String] match {
-        case s: JsSuccess[String] => //println("Path: " + s.get)
-          s.get match {
-            case "/redcatlabs/handshakes/api/v1.0/parse" => {
+
+      val response = List(json \ "method", json \ "path").map(_.validate[String]) match {
+        case List(method:JsSuccess[String], path:JsSuccess[String]) => //println("Path: " + s.get)
+          (method.get, path.get) match {
+            case ("POST", "/redcatlabs/handshakes/api/v1.0/parse") =>
                 parse_sentences(json \ "body")
-              }
-            case _ =>       Json.obj(
-                              "status" -> 404,
-                              "body" -> "Path not found"
-                            )
+                
+            case (m,p) => 
+              Json.obj(
+                "status" -> 404,
+                "body" -> s"Path '$p' not found for method '$m'"
+              )
           }
-        case e: JsError =>  Json.obj(
-                              "status" -> 500,
-                              "body" -> JsError.toFlatJson(e).toString()
-                            )
+        case List(method, path:JsError) =>  
+          Json.obj(
+            "status" -> 500,
+            "body" -> "Need both 'method' and 'path' to be defined"
+          )
       }
      
       // Send reply back to client
