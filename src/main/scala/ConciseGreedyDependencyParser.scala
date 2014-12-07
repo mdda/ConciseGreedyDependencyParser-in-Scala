@@ -566,57 +566,67 @@ class DependencyMaker(tagger:Tagger) {
       //  String-distance :: Cap numeric features at 5? (NB: n0 always > s0, by construction)
       val dist = if(s0 >= 0) math.min(n0 - s0, 5) else 0  // WAS :: ds0n0
       
-      val feature_set = mutable.Set[Feature]() 
+      //val feature_set = Set(
+      val bias = Feature("bias", "")  // It's useful to have a constant feature, which acts sort of like a prior
       
-      feature_set += Feature("bias", "")  // It's useful to have a constant feature, which acts sort of like a prior
+      //val feature_set = mutable.Set[Feature]()
 
-      // Add word and tag unigrams
-      List(wn0, wn1, wn2, ws0, ws1, ws2, wn0b1, wn0b2, ws0b1, ws0b2, ws0f1, ws0f2).foreach(
-        word => { if(word!=0) feature_set += Feature("w", word) }
+      val word_unigrams = for( 
+        word <- List(wn0, wn1, wn2, ws0, ws1, ws2, wn0b1, wn0b2, ws0b1, ws0b2, ws0f1, ws0f2)
+        if(word !=0)
+      ) yield Feature("w", word)
+      
+      val tag_unigrams = for( 
+        tag  <- List(tn0, tn1, tn2, ts0, ts1, ts2, tn0b1, tn0b2, ts0b1, ts0b2, ts0f1, ts0f2)
+        if(tag !=0)
+      ) yield Feature("t", tag)
+      
+      val word_tag_pairs = for(
+        ((word, tag), idx) <- List((wn0, tn0), (wn1, tn1), (wn2, tn2), (ws0, ts0)).zipWithIndex
+        if( word!=0 || tag!=0 )
+      ) yield Feature(s"wt$idx", s"w=$word t=$tag")
+
+      val bigrams = Set(
+        Feature("w s0n0", s"$ws0 $wn0"),
+        Feature("t s0n0", s"$ts0 $tn0"),
+        Feature("t n0n1", s"$tn0 $tn1")
       )
-      List(tn0, tn1, tn2, ts0, ts1, ts2, tn0b1, tn0b2, ts0b1, ts0b2, ts0f1, ts0f2).foreach(
-        tag  => { if(tag!=0) feature_set += Feature("t", tag) }
+
+      val trigrams = Set(
+        Feature("wtw nns", s"$wn0/$tn0 $ws0"),
+        Feature("wtt nns", s"$wn0/$tn0 $ts0"),
+        Feature("wtw ssn", s"$ws0/$ts0 $wn0"),
+        Feature("wtt ssn", s"$ws0/$ts0 $tn0")
+      )
+
+      val quadgrams = Set(
+        Feature("wtwt", s"$ws0/$ts0 $wn0/$tn0")
       )
       
-      // Add word/tag pairs
-      List((wn0, tn0), (wn1, tn1), (wn2, tn2), (ws0, ts0)).zipWithIndex.foreach{ 
-        case ((word,tag), idx) => { if( word!=0 || tag!=0 ) feature_set += Feature(s"wt$idx", s"w=$word t=$tag") }
-      }
-
-      // Add some bigrams
-      feature_set += Feature("w s0n0", s"$ws0 $wn0")
-      feature_set += Feature("t s0n0", s"$ts0 $tn0")
-      feature_set += Feature("t n0n1", s"$tn0 $tn1")
-
-      // Add some trigrams
-      feature_set += Feature("wtw nns", s"$wn0/$tn0 $ws0")
-      feature_set += Feature("wtt nns", s"$wn0/$tn0 $ts0")
-      feature_set += Feature("wtw ssn", s"$ws0/$ts0 $wn0")
-      feature_set += Feature("wtt ssn", s"$ws0/$ts0 $tn0")
-
-      // Add a quadgram
-      feature_set += Feature("wtwt", s"$ws0/$ts0 $wn0/$tn0")
+      val tag_trigrams = for(
+        ((t0,t1,t2), idx) <- List( (tn0, tn1, tn2),     (ts0, tn0, tn1),     (ts0, ts1, tn0),    (ts0, ts1, ts1), 
+                                   (ts0, ts0f1, tn0),   (ts0, ts0f1, tn0),   (ts0, tn0, tn0b1),
+                                   (ts0, ts0b1, ts0b2), (ts0, ts0f1, ts0f2), 
+                                   (tn0, tn0b1, tn0b2)  
+                                 ).zipWithIndex
+        if( t0!=0 || t1!=0 || t2!=0 ) 
+      ) yield Feature(s"ttt-$idx", s"$t0 $t1 $t2")
       
-      // Add some tag trigrams
-      List((tn0, tn1, tn2),     (ts0, tn0, tn1),     (ts0, ts1, tn0),    (ts0, ts1, ts1), 
-           (ts0, ts0f1, tn0),   (ts0, ts0f1, tn0),   (ts0, tn0, tn0b1),
-           (ts0, ts0b1, ts0b2), (ts0, ts0f1, ts0f2), 
-           (tn0, tn0b1, tn0b2)
-          ).zipWithIndex.foreach{
-        case ((t0,t1,t2), idx) => { if( t0!=0 || t1!=0 || t2!=0 ) feature_set += Feature(s"ttt-$idx", s"$t0 $t1 $t2") }
-      }
+      val valency_and_distance = for(
+        ((str, v), idx) <-   List( (ws0, vs0f), (ws0, vs0b), (wn0, vn0b),
+                                   (ts0, vs0f), (ts0, vs0b), (tn0, vn0b),
+                                   (ws0, dist), (wn0, dist), (ts0, dist), (tn0, dist),
+                                   ("t"+tn0+ts0, dist), ("w"+wn0+ws0, dist) 
+                                 ).zipWithIndex
+        if( str.length>0 || v!=0 ) 
+      ) yield Feature(s"val$idx", s"$str $v")
       
-      // Add some valency and distance features
-      List( (ws0, vs0f), (ws0, vs0b), (wn0, vn0b),
-            (ts0, vs0f), (ts0, vs0b), (tn0, vn0b),
-            (ws0, dist), (wn0, dist), (ts0, dist), (tn0, dist),
-            ("t"+tn0+ts0, dist), ("w"+wn0+ws0, dist)
-          ).zipWithIndex.foreach{
-        case ((str, v), idx) => { if( str.length>0 || v!=0 ) feature_set += Feature(s"val$idx", s"$str $v") }
-      } 
+      val feature_set_combined = Set(bias) ++ bigrams ++ trigrams ++ quadgrams ++
+                                 word_unigrams.toSet ++ tag_unigrams.toSet ++ word_tag_pairs.toSet ++
+                                 tag_trigrams.toSet ++ valency_and_distance.toSet
     
       // All weights on this set of features are ==1
-      feature_set.map( f => (f, 1:Score) ).toMap
+      feature_set_combined.map( f => (f, 1:Score) ).toMap
     }
 
   }
