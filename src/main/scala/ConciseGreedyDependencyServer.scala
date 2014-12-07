@@ -4,7 +4,7 @@ import org.zeromq.ZMQ
 
 // See : https://www.playframework.com/documentation/2.0/ScalaJson
 // And : https://www.playframework.com/documentation/2.3.x/ScalaJson
-import play.api.libs.json
+import play.api.libs.json._
 
 
 object rrserver {
@@ -34,7 +34,14 @@ object rrserver {
         case e: InterruptedException => e.printStackTrace()
       }
 */
-
+      // Parse method and path : 
+      val json = Json.parse(request)
+      
+      (json \ "path").validate[String] match {
+        case s: JsSuccess[String] => println("Path: " + s.get)
+        case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString()) 
+      }
+     
       // Send reply back to client
       val reply = "World".getBytes
       //NOOOO ! :: reply(reply.length-1)=0 //Sets the last byte of the reply to 0 
