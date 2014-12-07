@@ -8,7 +8,10 @@ object ConciseGreedyDependencyParserBuild extends Build {
       "-optimize",
       "-unchecked",
       "-deprecation"
-    )
+    ),
+    // This allows one to      :: "kill -9 `ps -h | grep java | grep -v sbt-launch | grep -v grep | awk '{print $1}'`"
+    //   or, more specifically :: "kill -9 `ps -h | grep ConciseGreedyDependencyParser.Main | grep -v grep | awk '{print $1}'`"
+    fork in run := true
   )
   
   def librarySettings = Seq(
