@@ -38,7 +38,12 @@ object rrserver {
       val json = Json.parse(request)
       
       (json \ "path").validate[String] match {
-        case s: JsSuccess[String] => println("Path: " + s.get)
+        case s: JsSuccess[String] => //println("Path: " + s.get)
+          s.get match {
+            case "/redcatlabs/handshakes/api/v1.0/parse" => {
+                println("Doing a parse")
+              }
+          }
         case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString()) 
       }
      
