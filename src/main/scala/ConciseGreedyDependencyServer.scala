@@ -27,6 +27,8 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
       // Parse method and path : 
       val json = Json.parse(request)
       
+      //val pair = List(json \ "method", json \ "path").map(_.validate[List[String]]) // Hmm
+      
       val response = (json \ "path").validate[String] match {
         case s: JsSuccess[String] => //println("Path: " + s.get)
           s.get match {
