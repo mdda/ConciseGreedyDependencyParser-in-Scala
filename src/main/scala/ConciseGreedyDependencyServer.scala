@@ -10,9 +10,6 @@ import ConciseGreedyDependencyParser.{CGDP, Tagger, DependencyMaker}
 
 case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
   def serve(args : Array[String]) {
-    println("HELLO server - Started")
-    
-    // Prepare our context and socket
     val context = ZMQ.context(1)
     val receiver = context.socket(ZMQ.REP)
     
