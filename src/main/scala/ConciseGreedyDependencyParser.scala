@@ -314,33 +314,33 @@ class Tagger(classes:Vector[ClassName], tag_dict:Map[Word, ClassNum]) {
   val perceptron = new Perceptron(classes.length)
 
   def get_features(word:List[Word], pos:List[ClassName], i:Int):Map[Feature,Score] = {
-    val feature_set = mutable.Set[Feature]() 
-    feature_set += Feature("bias",       "")  // It's useful to have a constant feature, which acts sort of like a prior
+    val feature_set = Set( 
+      Feature("bias",       ""),  // It's useful to have a constant feature, which acts sort of like a prior
     
-    feature_set += Feature("word",       word(i))  
-    feature_set += Feature("w suffix",   word(i).takeRight(3))  
-    feature_set += Feature("w pref1",    word(i).take(1))  
+      Feature("word",       word(i)),
+      Feature("w suffix",   word(i).takeRight(3)),
+      Feature("w pref1",    word(i).take(1)),
     
-    feature_set += Feature("tag-1",      pos(i-1))  
-    feature_set += Feature("tag-2",      pos(i-2))  
-    feature_set += Feature("tag-1-2",    s"${pos(i-1)} ${pos(i-2)}")  
+      Feature("tag-1",      pos(i-1)),
+      Feature("tag-2",      pos(i-2)),
+      Feature("tag-1-2",    s"${pos(i-1)} ${pos(i-2)}"),
     
-    feature_set += Feature("w,tag-1",    s"${word(i)} ${pos(i-1)}")  
+      Feature("w,tag-1",    s"${word(i)} ${pos(i-1)}"),
     
-    feature_set += Feature("w-1",        word(i-1))  
-    feature_set += Feature("w-1 suffix", word(i-1).takeRight(3))  
+      Feature("w-1",        word(i-1)),
+      Feature("w-1 suffix", word(i-1).takeRight(3)),
     
-    feature_set += Feature("w-2",        word(i-2))  
+      Feature("w-2",        word(i-2)),
     
-    feature_set += Feature("w+1",        word(i+1))  
-    feature_set += Feature("w+1 suffix", word(i+1).takeRight(3))  
+      Feature("w+1",        word(i+1)),
+      Feature("w+1 suffix", word(i+1).takeRight(3)),
     
-    feature_set += Feature("w+2",        word(i+2))  
+      Feature("w+2",        word(i+2))
+    )
     
     // All weights on this set of features are ==1
     feature_set.map( f => (f, 1:Score) ).toMap
   }
-
 
   def train(sentences:List[Sentence], seed:Int):Float = {
     val rand = new util.Random(seed)
@@ -506,8 +506,6 @@ class DependencyMaker(tagger:Tagger) {
     }
     
     def extract_features(words:Vector[Word], tags:Vector[ClassName]):Map[Feature,Score] = {
-      val feature_set = mutable.Set[Feature]() 
-      
       def get_stack_context[T<:String](data:Vector[T]):(T,T,T) = ( // Applies to both Word and ClassName (depth is implict from stack length)
         // NB: Always expecting 3 entries back...
         if(stack.length>0) data(stack(0)) else "".asInstanceOf[T],
@@ -567,6 +565,8 @@ class DependencyMaker(tagger:Tagger) {
           
       //  String-distance :: Cap numeric features at 5? (NB: n0 always > s0, by construction)
       val dist = if(s0 >= 0) math.min(n0 - s0, 5) else 0  // WAS :: ds0n0
+      
+      val feature_set = mutable.Set[Feature]() 
       
       feature_set += Feature("bias", "")  // It's useful to have a constant feature, which acts sort of like a prior
 

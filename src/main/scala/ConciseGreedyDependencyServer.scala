@@ -21,47 +21,54 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
 
     while (true) {
       // Wait for next request from client
-      val request = receiver.recv (0)  // This are no flags, nothing to do with null termination
-      
-      println ("Received request: [" + 
-                new String(request) // Creates a String from request
-                + "]")
+      val request = receiver.recv (0)  // This has flags of zero, nothing to do with null termination
+      println ("Received request: >" + new String(request) + "<") // Creates a String from request
 
-/*      
-      // Do some 'work'
-      try {
-        Thread.sleep (1000)
-      } catch {
-        case e: InterruptedException => e.printStackTrace()
-      }
-*/
       // Parse method and path : 
       val json = Json.parse(request)
       
-      (json \ "path").validate[String] match {
+      val response = (json \ "path").validate[String] match {
         case s: JsSuccess[String] => //println("Path: " + s.get)
           s.get match {
             case "/redcatlabs/handshakes/api/v1.0/parse" => {
-                println("Doing a parse")
-                
-/*                
-                val txt="Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29 ."
-                val s = utils.sentence(txt)
-                println(s"tagged = ${s.map{_.norm}.zip(tagger.tag(s))}")
-                
-                dm.test_gold_moves(s)
-*/
+                parse_sentences(json \ "body")
               }
+            case _ =>       Json.obj(
+                              "status" -> 404,
+                              "body" -> "Path not found"
+                            )
           }
-        case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString()) 
+        case e: JsError =>  Json.obj(
+                              "status" -> 500,
+                              "body" -> JsError.toFlatJson(e).toString()
+                            )
       }
      
       // Send reply back to client
-      val reply = "World".getBytes
-      //NOOOO ! :: reply(reply.length-1)=0 //Sets the last byte of the reply to 0 
-      receiver.send(reply, 0)
+      val reply_bytes = Json.stringify(response).getBytes
+      receiver.send(reply_bytes, 0)
     }
   }
   
-  //def parse_sentences(
+  def parse_sentences(body: JsValue):JsValue = {
+    println("Doing a parse")
+    
+    val results = for( txt <- (body \ "sentences").as[List[String]] ) yield {
+      val sentence = utils.sentence(txt)
+      val tags = tagger.tag(sentence)
+      //println(s"tagged = ${sentence.map{_.norm}.zip(tags)}")
+      val structure = dm.parse(sentence)  // This actual re-tags the sentence...  wasteful
+      
+      Json.obj(
+        "words" -> sentence.map{_.norm},
+        "tags" -> tags,
+        "structure" -> structure
+      )
+    }
+    
+    Json.obj(
+      "status" -> 200,
+      "body" -> Json.arr(results)
+    )    
+  }
 }

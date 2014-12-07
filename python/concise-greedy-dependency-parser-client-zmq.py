@@ -48,4 +48,4 @@ for num in range(1,4):
     
     # Wait for response
     message = socket.recv()
-    print("Received reply # %d [%s]" % (num, message))
+    print("Received reply # %d >%s<" % (num, message))
