@@ -15,13 +15,13 @@ import org.zeromq.ZMQ
 
 object rrserver {
   def serve(args : Array[String]) {
-    println("HELLO server")
+    println("HELLO server - Started")
     
     // Prepare our context and socket
     val context = ZMQ.context(1)
     val receiver = context.socket(ZMQ.REP)
     
-    receiver.connect("tcp://127.0.0.1:5678") // So the client must 'bind' to the socket
+    receiver.connect("tcp://localhost:5678") // So the client must 'bind' to the socket
     println("HELLO server - Connected")
 
     while (true) {

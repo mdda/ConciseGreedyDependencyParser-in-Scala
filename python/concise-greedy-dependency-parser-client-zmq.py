@@ -12,7 +12,7 @@ import zmq
 # Prepare our context and sockets
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
-socket.bind("tcp://127.0.0.1:5678")
+socket.bind("tcp://*:5678")
 
 print("Client is Bound to socket")
 
