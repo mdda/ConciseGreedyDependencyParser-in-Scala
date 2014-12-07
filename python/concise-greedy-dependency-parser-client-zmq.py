@@ -9,12 +9,12 @@
 # Needs : "easy_install pyzmq"
 import zmq
 
-# Prepare our context and sockets
+# Prepare our context and socket
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
-socket.bind("tcp://*:5678")
+socket.connect("tcp://localhost:5559")
 
-print("Client is Bound to socket")
+print("Client is connected to socket on broker frontend")
 
 # Do 10 requests, waiting each time for a response
 for request in range(1,11):

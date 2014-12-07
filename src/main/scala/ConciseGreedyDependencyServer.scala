@@ -21,7 +21,7 @@ object rrserver {
     val context = ZMQ.context(1)
     val receiver = context.socket(ZMQ.REP)
     
-    receiver.connect("tcp://localhost:5678") // So the client must 'bind' to the socket
+    receiver.connect("tcp://localhost:5560") // So the client (or broker) must 'bind' to the socket
     println("HELLO server - Connected")
 
     while (true) {
