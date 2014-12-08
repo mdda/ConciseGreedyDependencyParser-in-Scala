@@ -72,7 +72,7 @@ yum localinstall sbt-0.13.7.rpm
 ```
 
 
-Running
+Running the training / testing
 --------------------------------------
 
 Within the ```sbt``` environment, the following commands will do something: 
@@ -90,27 +90,30 @@ Within the ```sbt``` environment, the following commands will do something:
 > run test gold
 
 # TODO : run test deps
+
+> run server <PORT>
 ```
+
+
+Running as a ZeroMQ Server
+--------------------------------------
+Once the models have been trained and saved, the program can be run in server mode.
+In server mode, it responds to REP/REQ messages via ZeroMQ.
+
+Of course, an HTTP REST interface would also be possible, but (for reasons beyond this implementation),
+there's additional value in making it work a part of a ZeroMQ toolchain.  
+Indeed, [this ZeroMQ/Clojure blog post](http://augustl.com/blog/2013/zeromq_instead_of_http/) 
+makes it clear that there are many desirable properties of 'HTTP' semantics over ZeroMQ.
 
 If you just want to run it straight from the command line 
 (for instance, if you've done a ```run learn both save``` and now you just want to 
 use the Parser in server-mode) : 
 
 ```
-$ sbt "run server"
+$ sbt "run server <PORT>"
 ```
 
-Upcoming
---------------------------------------
+For convenience, there's a simple Python ZeroMQ ```client``` that sends a valid request to the server.
+There's also a Python ZeroMQ ```broker```, which should be left running, since it binds() to a pair of ports, and bridges them.
+These utilities are in the ```./python``` directory.
 
-Adding a ZeroMQ mode, so that the trained Parser can respond to incoming requests
-dynamically.  
-
-Of course, a REST interface would also be possible, but (for reasons beyond this implementation),
-there's probably additional value in making it work a part of a ZeroMQ toolchain.  
-Indeed, [this ZeroMQ/Clojure blog post](http://augustl.com/blog/2013/zeromq_instead_of_http/) 
-makes it clear that there are many desirable properties of 'HTTP' semantics over ZeroMQ.
-
-```
-# TODO : run server <PORT>
-```
