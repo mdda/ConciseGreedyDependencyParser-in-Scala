@@ -34,12 +34,12 @@ for num in range(1,2):
         'Between 1994 and 2000, Ms Ding worked in the Shenzhen office of Yixing Silk-Linen Factory and was in charge of regional sales. ', 
       ],
     }
-    #r = requests.post("http://127.0.0.1:5001/redcatlabs/handshakes/api/v1.0/parse", data=json.dumps(body))
+    #r = requests.post("http://127.0.0.1:5001/redcatlabs/customer/api/v1.0/parse", data=json.dumps(body))
 
     # See : http://augustl.com/blog/2013/zeromq_instead_of_http/
     request = dict(
       method = 'POST',
-      path = '/redcatlabs/handshakes/api/v1.0/parse',
+      path = '/redcatlabs/customer/api/v1.0/parse',
       body = body,
     )
     

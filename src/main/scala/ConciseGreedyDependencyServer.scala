@@ -13,7 +13,9 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
     val context = ZMQ.context(1)
     val receiver = context.socket(ZMQ.REP)
     
-    receiver.connect("tcp://localhost:5560") // So the client (or broker) must 'bind' to the socket
+    val port = args.last.asOpt[Int].getOrElse(5560)
+    
+    receiver.connect(s"tcp://localhost:$port") // So the client (or broker) must 'bind' to the socket
     println("HELLO server - Connected")
 
     while (true) {
@@ -31,7 +33,7 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
       val response = (json \ "path").validate[String] match {
         case path:JsSuccess[String] => //println("Path: " + s.get)
           (method, path.get) match {
-            case ("POST", "/redcatlabs/handshakes/api/v1.0/parse") =>
+            case ("POST", "/redcatlabs/customer/api/v1.0/parse") =>
                 parse_sentences(json \ "body")
                 
             case (m,p) => 
@@ -57,11 +59,7 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
     println("Doing a parse of : " + body)
     
     val results = for( txt <- (body \ "sentences").as[List[String]] ) yield {
-      println("Text : " + txt)
-      
       val sentence = utils.sentence(txt)
-      println("Sentence : " + sentence)
-      
       val tags = tagger.tag(sentence)
       //println(s"tagged = ${sentence.map{_.norm}.zip(tags)}")
       val structure = dm.parse(sentence)  // This actual re-tags the sentence...  wasteful

@@ -883,7 +883,7 @@ object Main extends App {
       ZMQserver(utils, tagger, dm).serve(args)
     }
     else {
-      printf("Usage :\nrun {train|test} {tagger|deps|both|gold} {save}\n")
+      printf("Usage :\nrun {train|test} {tagger|deps|both|gold} {save} | run server\n")
     }
     
   }
