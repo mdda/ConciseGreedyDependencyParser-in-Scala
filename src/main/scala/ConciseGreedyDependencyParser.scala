@@ -32,10 +32,10 @@ package object ConciseGreedyDependencyParserObj {
   
   case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1)) {
     lazy val norm:Word = {
-      if      (raw.contains('-') && raw(0) != '-')        "!HYPHEN"
-      else if (raw.length == 4 && raw.forall(_.isDigit))  "!YEAR"
-      else if (raw(0).isDigit)                            "!DIGITS"
-      else                                                raw.toLowerCase
+      if (raw.forall(c => c.isDigit || c == '-' || c == '.')) {
+        if (raw.forall(_.isDigit) && raw.length == 4) "#YEAR#" else "#NUM#"
+      }
+      else raw // .toLowerCase
     }
   }
   
@@ -761,14 +761,18 @@ class CGDP {
     val s1 = s0.replaceAllLiterally("...", " #ELIPSIS# ")
                .replaceAll( """(\d)\.""", """$1#POINT#""")
                .replaceAll( """(\d+)(#POINT#?)(\d*)\.""", """ $1$2$3 """) // Spaces either side of a (decimal) number
+
+    val s2 = s1 // This is 'space' for abbreviations such as 'U.S.' to be 'made immune'
     
     // Space out remaining unusual characters
-    val space_out = List(",", ".", ":", ";", "$", "\"", "''", "``", "'t", "'m", "'ve", "'d")
-    val s2 = space_out.foldLeft(s1){ (str, spaceme) => str.replaceAllLiterally(spaceme, " "+spaceme+" ") }
+    val space_out = List(",", ".", ":", ";", "$", "&", "\"", "''", "``", "'t", "'m", "'ve", "'d", "(", ")")
+    val s3 = space_out.foldLeft(s2){ (str, spaceme) => str.replaceAllLiterally(spaceme, " "+spaceme+" ") }
     
-    val s3 = s2.replaceAllLiterally( """#POINT#""", """.""").replaceAllLiterally("#ELIPSIS#", "...") // Undo dot protection 
+    val s4 = s3.replaceAllLiterally( """#POINT#""", """.""").replaceAllLiterally("#ELIPSIS#", "...") // Undo dot protection 
     
-    s3.split("""\s+""").filter( _.length()>0 ).map( word => WordData(word) ).toList
+    val s5 = s4 // Undo the abbreviation immunity hack
+    
+    s5.split("""\s+""").filter( _.length()>0 ).map( word => WordData(word) ).toList
   }
 
 }
