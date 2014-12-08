@@ -60,6 +60,17 @@ If you want to explicitly link to a specific directory instead,
 search the Scala source for ```nltk_data``` and update the path to point directly to the appropriate directory.
 
 
+Installation (from scratch)
+--------------------------------------
+On my Fedora Linux server, all that is required is the zeromq3 library, 
+and an [installation of ```sbt```](http://www.scala-sbt.org/release/tutorial/Installing-sbt-on-Linux.html) 
+(which automatically brings in java, etc as dependencies) : 
+```
+yum install zeromq3-devel
+wget https://dl.bintray.com/sbt/rpm/sbt-0.13.7.rpm
+yum localinstall sbt-0.13.7.rpm
+```
+
 
 Running
 --------------------------------------
@@ -67,14 +78,26 @@ Running
 Within the ```sbt``` environment, the following commands will do something: 
 
 ```
-run learn tagger
-run learn tagger save
-run learn deps
-run learn deps save
-run learn both save
-run test tagger
-run test gold
+> run learn tagger
+> run learn tagger save
+
+> run learn deps
+> run learn deps save
+
+> run learn both save
+
+> run test tagger
+> run test gold
+
 # TODO : run test deps
+```
+
+If you just want to run it straight from the command line 
+(for instance, if you've done a ```run learn both save``` and now you just want to 
+use the Parser in server-mode) : 
+
+```
+$ sbt "run server"
 ```
 
 Upcoming
