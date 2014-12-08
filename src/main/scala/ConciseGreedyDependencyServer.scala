@@ -1,5 +1,7 @@
 package ConciseGreedyDependencyServer
 
+import scala.util.Try
+
 import org.zeromq.ZMQ
 
 // See : https://www.playframework.com/documentation/2.0/ScalaJson
@@ -13,10 +15,10 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
     val context = ZMQ.context(1)
     val receiver = context.socket(ZMQ.REP)
     
-    val port = args.last.asOpt[Int].getOrElse(5560)
+    val port = Try( args.last.toInt ).toOption.getOrElse(5560)
     
     receiver.connect(s"tcp://localhost:$port") // So the client (or broker) must 'bind' to the socket
-    println("HELLO server - Connected")
+    println(s"CGDS server - Connected to localhost:$port")
 
     while (true) {
       // Wait for next request from client
