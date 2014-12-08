@@ -22,10 +22,15 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
       println ("Received request: >" + new String(request) + "<") // Creates a String from request
 
       val json = Json.parse(request)
-
-      val response = List(json \ "method", json \ "path").map(_.validate[String]) match {
-        case List(method:JsSuccess[String], path:JsSuccess[String]) => //println("Path: " + s.get)
-          (method.get, path.get) match {
+      
+      val method = (json \ "method").asOpt[String] match {
+        case Some(m) => if(List("POST", "GET").contains(m)) m else ""
+        case _ => ""
+      }
+      
+      val response = (json \ "path").validate[String] match {
+        case path:JsSuccess[String] => //println("Path: " + s.get)
+          (method, path.get) match {
             case ("POST", "/redcatlabs/handshakes/api/v1.0/parse") =>
                 parse_sentences(json \ "body")
                 
@@ -35,10 +40,10 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
                 "body" -> s"Path '$p' not found for method '$m'"
               )
           }
-        case List(method, path:JsError) =>  
+        case path:JsError =>  
           Json.obj(
             "status" -> 500,
-            "body" -> "Need both 'method' and 'path' to be defined"
+            "body" -> "Invalid path"
           )
       }
      
