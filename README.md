@@ -50,7 +50,14 @@ or by downloading directly from : ```http://www.nltk.org/nltk_data/```, the data
 At the time of writing, a direct link is : ```http://nltk.github.com/nltk_data/packages/corpora/dependency_treebank.zip```.
 
 Once the file archive has been downloaded and the files extracted, 
-search the Scala source for ```nltk_data``` and update the path to point to the appropriate directory.
+create a link in the main directory to the ```nltk_data``` location.  On my machine : 
+```
+cd ConciseGreedyDependencyParser-in-Scala
+ln -s /home/andrewsm/nltk_data .
+```
+
+If you want to explicitly link to a specific directory instead, 
+search the Scala source for ```nltk_data``` and update the path to point directly to the appropriate directory.
 
 
 

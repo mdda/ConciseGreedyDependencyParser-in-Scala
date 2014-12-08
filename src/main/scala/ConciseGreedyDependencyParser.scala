@@ -800,7 +800,7 @@ object Main extends App {
     
     //val sentences = utils.read_CONLL("/home/andrewsm/nltk_data/corpora/dependency_treebank/wsj_0001.dp") // Single File
     lazy val training_sentences = (for (
-       (file,i) <- new File("/home/andrewsm/nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
+       (file,i) <- new File("./nltk_data/corpora/dependency_treebank/").listFiles.toList.sorted.zipWithIndex
        if( file.getName.endsWith(".dp") )
        //if(i<5)
     ) yield utils.read_CONLL(file.getPath) ).flatMap( a => a ) 
