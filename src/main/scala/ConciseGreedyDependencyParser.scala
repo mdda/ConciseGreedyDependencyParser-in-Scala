@@ -32,7 +32,11 @@ package object ConciseGreedyDependencyParserObj {
   
   case class WordData(raw:Word, pos:ClassName="", dep:DependencyIndex=(-1)) {
     lazy val norm:Word = {
-      if (raw.forall(c => c.isDigit || c == '-' || c == '.')) {
+      if (raw.length == 1) {
+        if  (raw(0).isDigit) "#NUM#" 
+        else raw
+      }
+      else if (raw.forall(c => c.isDigit || c == '-' || c == '.')) {
         if (raw.forall(_.isDigit) && raw.length == 4) "#YEAR#" else "#NUM#"
       }
       else raw // .toLowerCase
