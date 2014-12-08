@@ -28,7 +28,7 @@ if False : # This is the Hello World test
       print("Received reply %d [%s]" % (request, message))
 
 # Do some requests, waiting each time for a response
-for num in range(1,4):
+for num in range(1,2):
     body = {
       'sentences': [
         'Between 1994 and 2000, Ms Ding worked in the Shenzhen office of Yixing Silk-Linen Factory and was in charge of regional sales. ', 

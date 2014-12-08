@@ -768,7 +768,7 @@ class CGDP {
     
     val s3 = s2.replaceAllLiterally( """#POINT#""", """.""").replaceAllLiterally("#ELIPSIS#", "...") // Undo dot protection 
     
-    s3.split("""\s+""").map( word => WordData(word) ).toList
+    s3.split("""\s+""").filter( _.length()>0 ).map( word => WordData(word) ).toList
   }
 
 }

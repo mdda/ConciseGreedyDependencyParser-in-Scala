@@ -54,10 +54,14 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
   }
   
   def parse_sentences(body: JsValue):JsValue = {
-    println("Doing a parse")
+    println("Doing a parse of : " + body)
     
     val results = for( txt <- (body \ "sentences").as[List[String]] ) yield {
+      println("Text : " + txt)
+      
       val sentence = utils.sentence(txt)
+      println("Sentence : " + sentence)
+      
       val tags = tagger.tag(sentence)
       //println(s"tagged = ${sentence.map{_.norm}.zip(tags)}")
       val structure = dm.parse(sentence)  // This actual re-tags the sentence...  wasteful
@@ -71,7 +75,7 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
     
     Json.obj(
       "status" -> 200,
-      "body" -> Json.arr(results)
+      "body" -> results
     )    
   }
 }
