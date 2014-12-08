@@ -35,7 +35,7 @@ Internal dependency list representation
 ------------------------------------------------------------
 
 Scala lists are quicker to prepend to, so instead of maintaining ```stack``` using ```.append()``` and ```stack[-1]```, 
-the Scala version simply does ``` x :: stack``` and checks ```stack.head```.
+the Scala version simply does ```x :: stack``` and checks ```stack.head```.
 
 
 Gold Move Logic
@@ -115,9 +115,9 @@ Overall performance / stats
 When training on the 199 file ```dependency_treebank```, we get the following results 
 (performance figures are the fraction of correct tags / dependency assignments over the whole of the *training set* for each iteration)
 
- * Tagger : 10 iterations took 23s (Python version : 74s). Saved size on disc : 1.8Mb (800k zipped)
+  * Tagger : 10 iterations took 23s (Python version : 74s). Saved size on disc : 1.8Mb (800k zipped)
 
-   * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
+    * Tagger Performance = Vector(0.849, 0.918, 0.940, 0.952, 0.960, 0.966, 0.971, 0.975, 0.978, 0.980)
 
   * Dependency Parser : 15 iterations took 350s (Python version : 663s).  Saved size on disc : 14Mb of data (6Mb zipped)
 

@@ -67,7 +67,7 @@ case class ZMQserver(utils : CGDP, tagger : Tagger, dm : DependencyMaker) {
       val structure = dm.parse(sentence)  // This actual re-tags the sentence...  wasteful
       
       Json.obj(
-        "words" -> sentence.map{_.norm},
+        "words" -> sentence.map{_.raw},
         "tags" -> tags,
         "structure" -> structure
       )
