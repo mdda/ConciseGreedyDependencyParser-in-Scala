@@ -60,9 +60,9 @@ If you want to explicitly link to a specific directory instead,
 search the Scala source for ```nltk_data``` and update the path to point directly to the appropriate directory.
 
 
-Installation (from scratch)
+Pre-Installation (sbt from scratch)
 --------------------------------------
-On my Fedora Linux server, all that is required is the zeromq3 library, 
+On my Fedora Linux server, all that is required is the ```zeromq3``` backend library (for the Server functionality), 
 and an [installation of ```sbt```](http://www.scala-sbt.org/release/tutorial/Installing-sbt-on-Linux.html) 
 (which automatically brings in java, etc as dependencies) : 
 ```
