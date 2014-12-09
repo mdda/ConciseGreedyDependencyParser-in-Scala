@@ -136,3 +136,23 @@ The client program can easily be updated for testing :
 ```
 python python/concise-greedy-dependency-parser-client-zmq.py
 ```
+
+It will produce output in the following form (newlines added for clarity) :
+```
+Client is connected to socket on broker frontend
+Sending Request # 1
+Received reply # 1 >{
+ "status":200,
+ "body":[
+  [{
+   "words":["Between","#YEAR#","and","#YEAR#",",","Ms","Ding","worked",
+            "in","the","Shenzhen","office","of","Yixing","Silk-Linen","Factory",
+            "and","was","in","charge","of","regional","sales","."],
+   "tags": ["NNP","CD","CC","CD",",","NNP","NNP","VBD",
+            "IN","DT","NNP","NN","IN","VBG","NNP","NNP",
+            "CC","VBD","IN","NN","IN","JJ","NNS","."],
+   "structure":[7,3,3,0,7,6,7,24,7,11,11,8,11,12,15,13,7,7,17,18,19,22,20,7]
+  }]
+ ]
+}<
+```
