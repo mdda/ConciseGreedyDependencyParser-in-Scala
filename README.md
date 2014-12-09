@@ -113,7 +113,26 @@ use the Parser in server-mode) :
 $ sbt "run server <PORT>"
 ```
 
-For convenience, there's a simple Python ZeroMQ ```client``` that sends a valid request to the server.
-There's also a Python ZeroMQ ```broker```, which should be left running, since it binds() to a pair of ports, and bridges them.
+Python ZeroMQ Utilities
+--------------------------------------
+
+For convenience, there are simple Python ZeroMQ ```client``` and ```broker``` 
+programs that can send valid requests to the (scala) server.  
 These utilities are in the ```./python``` directory.
 
+To get them running, the ```zeromq-devel``` library should be installed (as above), and also the Python ZeroMQ library 
+(this can also easily be done within a ```virtualenv```, which is nice from an isolation point-of-view): 
+```
+pip install pyzmq
+```
+
+The Python ZeroMQ ```broker``` (which should be left running, since it binds() to a pair of ports, and bridges them) can be started :
+```
+python python/concise-greedy-dependency-parser-broker-zmq.py &
+```
+(this runs without any output).
+
+The client program can easily be updated for testing :
+```
+python python/concise-greedy-dependency-parser-client-zmq.py
+```
