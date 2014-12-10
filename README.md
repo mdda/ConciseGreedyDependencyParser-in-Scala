@@ -113,6 +113,11 @@ use the Parser in server-mode) :
 $ sbt "run server <PORT>"
 ```
 
+In order to ease development, the ```build.scala``` is set up to fork 
+the scala code that's being run - and a bash script ``` ./kill-CGDP``` will kill
+the child process without bringing down the sbt session.
+
+
 Python ZeroMQ Utilities
 --------------------------------------
 
