@@ -16,7 +16,7 @@ This version includes a copy of the original code for reference, but the goal is
 There's a much more complete system (which extends over very many more files, however) 
 at Matthew Honnibal's (the original author) GitHub account : https://github.com/syllog1sm/redshift.  
 
-As background material, there's also a [presentation about this project](http://redcatlabs.com/2014-12-10_ParsingEnglish.scala/) that I gave to the [Singapore Scala MeetUp Group](http://www.meetup.com/Singapore-Scala-Programmers/events/218727190/).
+As background material, this [presentation about this project](http://redcatlabs.com/2014-12-10_ParsingEnglish.scala/) that I gave to the [Singapore Scala MeetUp Group](http://www.meetup.com/Singapore-Scala-Programmers/events/218727190/) could be interesting.
 
 
 Significant Files
