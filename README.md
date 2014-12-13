@@ -11,7 +11,7 @@ With original BSD code here :
 
   * https://gist.github.com/syllog1sm/10343947
 
-This version includes the original code, but is mostly about implementing the same minimalist ideals, in Scala.
+This version includes a copy of the original code for reference, but the goal is to implement the same minimalist ideals, in Scala.
 
 There's a much more complete system (which extends over very many more files, however) 
 at Matthew Honnibal's (the original author) GitHub account : https://github.com/syllog1sm/redshift.  
